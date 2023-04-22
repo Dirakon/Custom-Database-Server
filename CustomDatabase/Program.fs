@@ -1,18 +1,11 @@
 namespace CustomDatabase
+
 #nowarn "20"
-open System
-open System.Collections.Generic
-open System.IO
-open System.Linq
-open System.Threading.Tasks
-open Microsoft.AspNetCore
+
 open Microsoft.AspNetCore.Builder
-open Microsoft.AspNetCore.Hosting
-open Microsoft.AspNetCore.HttpsPolicy
-open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
-open Microsoft.Extensions.Logging
+open Microsoft.OpenApi.Models
 
 module Program =
     let exitCode = 0
@@ -22,7 +15,11 @@ module Program =
 
         let builder = WebApplication.CreateBuilder(args)
 
+        let info = OpenApiInfo()
+        info.Title <- "My API V1"
+        info.Version <- "v1"
         builder.Services.AddControllers()
+        builder.Services.AddSwaggerGen(fun config -> config.SwaggerDoc("v1", info))
 
         let app = builder.Build()
 
@@ -30,6 +27,14 @@ module Program =
 
         app.UseAuthorization()
         app.MapControllers()
+
+        if app.Environment.IsDevelopment() then
+            do
+                app.UseDeveloperExceptionPage()
+                app.UseSwagger()
+                app.UseSwaggerUI(fun config -> config.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1"))
+
+
 
         app.Run()
 
