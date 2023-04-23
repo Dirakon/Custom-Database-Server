@@ -2,10 +2,14 @@ namespace CustomDatabase
 
 #nowarn "20"
 
+open System.Text.Json.Serialization
 open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.OpenApi.Models
+open Newtonsoft.Json
+open Newtonsoft.Json.Linq
+
 
 module Program =
     let exitCode = 0
@@ -20,6 +24,10 @@ module Program =
         info.Version <- "v1"
         builder.Services.AddControllers()
         builder.Services.AddSwaggerGen(fun config -> config.SwaggerDoc("v1", info))
+
+        builder.Services
+            .AddControllersWithViews() // or whichever method you're using to get an IMvcBuilder
+            .AddNewtonsoftJson()
 
         let app = builder.Build()
 
