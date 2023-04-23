@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CustomDatabase", "CustomDatabase\CustomDatabase.fsproj", "{071A7C78-D4C0-4FEB-BADE-362B06896682}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QueryLanguage", "QueryLanguage\QueryLanguage.csproj", "{6052C72B-32C5-46B0-9AAE-C59C57F8B0DC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{071A7C78-D4C0-4FEB-BADE-362B06896682}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{071A7C78-D4C0-4FEB-BADE-362B06896682}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{071A7C78-D4C0-4FEB-BADE-362B06896682}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6052C72B-32C5-46B0-9AAE-C59C57F8B0DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6052C72B-32C5-46B0-9AAE-C59C57F8B0DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6052C72B-32C5-46B0-9AAE-C59C57F8B0DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6052C72B-32C5-46B0-9AAE-C59C57F8B0DC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -9,6 +9,7 @@ open Microsoft.Extensions.Hosting
 open Microsoft.OpenApi.Models
 open Newtonsoft.Json
 open Newtonsoft.Json.Linq
+open QueryLanguage
 
 
 module Program =
@@ -45,5 +46,5 @@ module Program =
 
 
         app.Run()
-
+        Class1.DoStuff();
         exitCode
