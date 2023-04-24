@@ -3,6 +3,8 @@ namespace CustomDatabase
 #nowarn "20"
 
 open System.Text.Json.Serialization
+open Antlr4.Runtime
+open GeneratedLanguage
 open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
@@ -43,8 +45,7 @@ module Program =
                 app.UseSwagger()
                 app.UseSwaggerUI(fun config -> config.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1"))
 
-
-
-        app.Run()
         Class1.DoStuff();
+        //app.Run()
+        
         exitCode
