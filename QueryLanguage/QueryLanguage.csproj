@@ -6,9 +6,9 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Antlr4.Runtime.Standard" Version="4.11.1" />
+        <PackageReference Include="Antlr4.Runtime.Standard" Version="4.11.1"/>
     </ItemGroup>
     <ItemGroup>
-        <Antlr4 Include="QueryLanguage.g4" />
+        <Antlr4 Include="QueryLanguage.g4"/>
     </ItemGroup>
 </Project>

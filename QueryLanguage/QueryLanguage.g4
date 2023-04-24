@@ -2,15 +2,53 @@ grammar QueryLanguage;
 /*
  * Parser Rules
  */
-entityCreation      : CREATE ENTITY entityName CURLY_START membersDeclaration CURLY_END ;
-membersDeclaration  : () | (memberDeclaration COMA membersDeclaration)| (memberDeclaration);
-memberDeclaration   :  (memberName COLON type) |  (memberName COLON type PARA_START constraintsDeclaration PARA_END);
-constraintsDeclaration   : ()   |   (constraintDeclaration COMA constraintsDeclaration)|   (constraintDeclaration);
+entityCreation      : CREATE ENTITY entityName '{' membersDeclaration '}' ;
+membersDeclaration  : () | (memberDeclaration ',' membersDeclaration)| (memberDeclaration);
+memberDeclaration   :  (memberName ':' type) |  (memberName ':' type '(' constraintsDeclaration ')');
+constraintsDeclaration   : ()   |   (constraintDeclaration ',' constraintsDeclaration)|   (constraintDeclaration);
 constraintDeclaration   : UNIQUE; // More constraints?
 memberName          : VARNAME;
-type                : INT | BOOL | list | STRING | FLOAT;
-list                : SQUARE_START type SQUARE_END;
+type                : INT | BOOL | list | STRING | FLOAT | ('&' entityName);
+list                : '[' type ']';
 entityName          : VARNAME ;
+
+entityAddition      :  entityGroupAddition | entitySingleAddition;
+entitySingleAddition      : ADD entityName json_obj;
+entityGroupAddition      : ADD '[' entityName ']' json_arr ;
+
+entityReplacement     :  entityGroupReplacement | entitySingleReplacement;
+entitySingleReplacement     : REPLACE raw_pointer json_obj;
+entityGroupReplacement     : REPLACE '[' multiple_raw_pointers ']' json_arr;
+multiple_raw_pointers   : () | (raw_pointer) | (raw_pointer ',' multiple_raw_pointers) ;
+raw_pointer : VARNAME;
+
+entityRetrieval     :  entityGroupRetrieval | entitySingleRetrieval;
+entitySingleRetrieval     : GET entityName; // TODO: filters?
+entityGroupRetrieval     : GET '[' entityName ']';
+
+json_obj
+   : '{' json_pair (',' json_pair)* '}'
+   | '{' '}'
+   ;
+
+json_pair
+   : QUOTED_STRING ':' json_value
+   ;
+
+json_arr
+   : '[' json_value (',' json_value)* ']'
+   | '[' ']'
+   ;
+
+json_value
+   : QUOTED_STRING
+   | NUMBER
+   | json_obj
+   | json_arr
+   | 'true'
+   | 'false'
+   | 'null'
+   ;
 
 /*
  * Lexer Rules
@@ -31,9 +69,38 @@ fragment B          : ('B'|'b') ;
 fragment F          : ('F'|'f') ;
 fragment U          : ('U'|'u') ;
 fragment Q          : ('Q'|'q') ;
+fragment D          : ('D'|'d') ;
+fragment P          : ('P'|'p') ;
 fragment LOWERCASE  : [a-z] ;
 fragment UPPERCASE  : [A-Z] ;
+
+fragment ESC
+   : '\\' (["\\/bfnrt] | UNICODE)
+   ;
+fragment UNICODE
+   : 'u' HEX HEX HEX HEX
+   ;
+fragment HEX
+   : [0-9a-fA-F]
+   ;
+fragment SAFECODEPOINT
+   : ~ ["\\\u0000-\u001F]
+   ;
+
+fragment EXP
+   // exponent number permits leading 0s (e.g. `1e01`)
+   : [Ee] [+\-]? [0-9]+
+   ;
+
+fragment INTEGER_PART
+   // integer part forbis leading 0s (e.g. `01`)
+   : '0' | [1-9] DIGIT*
+   ;
+   
+GET                 : G E T;
+REPLACE             : R E P L A C E;
 BOOL                : B O O L;
+ADD                : A D D;
 INT                : I N T ;
 STRING                : S T R I N G;
 FLOAT                : F L O A T;
@@ -41,18 +108,24 @@ SAYS                : S A Y S ;
 CREATE              : C R E A T E ;
 ENTITY              : E N T I T Y ;
 UNIQUE              : U N I Q U E ;
-TEXT                : '"' .*? '"' ;
-CURLY_START         : '{';
-CURLY_END           : '}';
-SQUARE_START         : '[';
-SQUARE_END           : ']';
-PARA_START         : '(';
-PARA_END           : ')';
-COMA                : ',';
-COLON                : ':';
 DIGIT                : [0-9];
+
+QUOTED_STRING
+   : '"' (ESC | SAFECODEPOINT)* '"'
+   ;
+
+
+NUMBER
+   : '-'? INTEGER_PART ('.' DIGIT +)? EXP?
+   ;
+
+
 ALPHA                : [a-zA-Z_];
 VARNAME              :ALPHA ( ALPHA | DIGIT )*;
 WORD                : (LOWERCASE | UPPERCASE)+ ;
+
+WS
+   : [ \t\n\r] + -> skip
+   ;
+   
 WHITESPACE          : (' '|'\t')+ -> skip ;
-NEWLINE             : ('\r'? '\n' | '\r')+ ;
