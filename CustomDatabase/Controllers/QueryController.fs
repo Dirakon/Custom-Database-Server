@@ -35,7 +35,7 @@ type QueryController(logger: ILogger<QueryController>) =
     member this.CreateOrAdd([<Required>] query: string) =
         let result =
             match (QueryParser.parseAsCreationQuery query, QueryParser.parseAsAdditionQuery query) with
-            | (Result.Error creationError, Result.Error additionError) ->
+            | Result.Error creationError, Result.Error additionError ->
                 let lowerTrimmedQuery = query.Trim().ToLower()
 
                 if lowerTrimmedQuery.StartsWith("create") then
@@ -44,8 +44,8 @@ type QueryController(logger: ILogger<QueryController>) =
                     Error additionError
                 else
                     Error "Unknown query. This HTTP request supports only CREATE and ADD queries."
-            | (Result.Ok creationContext, _) -> this.ExecuteCreationRequest(creationContext)
-            | (_, Result.Ok additionContext) -> this.ExecuteAdditionRequest(additionContext)
+            | Result.Ok creationContext, _ -> this.ExecuteCreationRequest(creationContext)
+            | _, Result.Ok additionContext -> this.ExecuteAdditionRequest(additionContext)
 
         result
 

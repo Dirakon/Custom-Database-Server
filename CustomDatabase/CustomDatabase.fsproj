@@ -5,24 +5,27 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="IDataStorage.fs"/>
-        <Compile Include="ThrowErrorListener.fs"/>
-        <Compile Include="QueryParser.fs"/>
-        <Compile Include="Value.fs"/>
-        <Compile Include="Controllers\QueryController.fs"/>
-        <Compile Include="Program.fs"/>
+        <Compile Include="Value.fs" />
+        <Compile Include="JsonConverter.fs" />
+        <Compile Include="Entity.fs" />
+        <Compile Include="IDataStorage.fs" />
+        <Compile Include="DataStorage.fs" />
+        <Compile Include="ThrowErrorListener.fs" />
+        <Compile Include="QueryParser.fs" />
+        <Compile Include="Controllers\QueryController.fs" />
+        <Compile Include="Program.fs" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="FSharp.SystemTextJson" Version="1.1.23"/>
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="7.0.5"/>
-        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.0-preview.3.23174.8"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.3"/>
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0"/>
+        <PackageReference Include="FSharp.SystemTextJson" Version="1.1.23" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="7.0.5" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.0-preview.3.23174.8" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\QueryLanguage\QueryLanguage.csproj"/>
+        <ProjectReference Include="..\QueryLanguage\QueryLanguage.csproj" />
     </ItemGroup>
 
 
