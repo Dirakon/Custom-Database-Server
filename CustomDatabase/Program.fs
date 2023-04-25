@@ -3,15 +3,11 @@ namespace CustomDatabase
 #nowarn "20"
 
 open System.Text.Json.Serialization
-open Antlr4.Runtime
-open GeneratedLanguage
+open CustomDatabase.Value
 open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.OpenApi.Models
-open Newtonsoft.Json
-open Newtonsoft.Json.Linq
-open QueryLanguage
 
 
 module Program =
@@ -25,12 +21,18 @@ module Program =
         let info = OpenApiInfo()
         info.Title <- "My API V1"
         info.Version <- "v1"
-        builder.Services.AddControllers()
-        builder.Services.AddSwaggerGen(fun config -> config.SwaggerDoc("v1", info))
 
         builder.Services
-            .AddControllersWithViews() // or whichever method you're using to get an IMvcBuilder
-            .AddNewtonsoftJson()
+            .AddControllers()
+            .AddJsonOptions(fun options ->
+                JsonFSharpOptions
+                    .FSharpLuLike()
+                    .AddToJsonSerializerOptions(options.JsonSerializerOptions)
+
+                options.JsonSerializerOptions.Converters.Insert(0, ValueResolver()))
+
+        builder.Services.AddSwaggerGen(fun config -> config.SwaggerDoc("v1", info))
+
 
         let app = builder.Build()
 
@@ -45,7 +47,6 @@ module Program =
                 app.UseSwagger()
                 app.UseSwaggerUI(fun config -> config.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1"))
 
-        Class1.DoStuff();
-        //app.Run()
-        
+        app.Run()
+
         exitCode

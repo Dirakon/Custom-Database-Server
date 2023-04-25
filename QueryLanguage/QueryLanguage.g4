@@ -1,4 +1,17 @@
 grammar QueryLanguage;
+//@parser::members {
+//  @Override
+//  public void reportError(RecognitionException e) {
+//    throw new RuntimeException("I quit!\n" + e.getMessage()); 
+//  }
+//}
+//
+//@lexer::members {
+//  @Override
+//  public void reportError(RecognitionException e) {
+//    throw new RuntimeException("I quit!\n" + e.getMessage()); 
+//  }
+//}
 /*
  * Parser Rules
  */
@@ -13,12 +26,12 @@ list                : '[' type ']';
 entityName          : VARNAME ;
 
 entityAddition      :  entityGroupAddition | entitySingleAddition;
-entitySingleAddition      : ADD entityName json_obj;
-entityGroupAddition      : ADD '[' entityName ']' json_arr ;
+entitySingleAddition      : ADD entityName jsonObj;
+entityGroupAddition      : ADD '[' entityName ']' jsonArr ;
 
 entityReplacement     :  entityGroupReplacement | entitySingleReplacement;
-entitySingleReplacement     : REPLACE raw_pointer json_obj;
-entityGroupReplacement     : REPLACE '[' multiple_raw_pointers ']' json_arr;
+entitySingleReplacement     : REPLACE raw_pointer jsonObj;
+entityGroupReplacement     : REPLACE '[' multiple_raw_pointers ']' jsonArr;
 multiple_raw_pointers   : () | (raw_pointer) | (raw_pointer ',' multiple_raw_pointers) ;
 raw_pointer : VARNAME;
 
@@ -26,25 +39,25 @@ entityRetrieval     :  entityGroupRetrieval | entitySingleRetrieval;
 entitySingleRetrieval     : GET entityName; // TODO: filters?
 entityGroupRetrieval     : GET '[' entityName ']';
 
-json_obj
-   : '{' json_pair (',' json_pair)* '}'
+jsonObj
+   : '{' jsonPair (',' jsonPair)* '}'
    | '{' '}'
    ;
 
-json_pair
-   : QUOTED_STRING ':' json_value
+jsonPair
+   : QUOTED_STRING ':' jsonValue
    ;
 
-json_arr
-   : '[' json_value (',' json_value)* ']'
+jsonArr
+   : '[' jsonValue (',' jsonValue)* ']'
    | '[' ']'
    ;
 
-json_value
+jsonValue
    : QUOTED_STRING
    | NUMBER
-   | json_obj
-   | json_arr
+   | jsonObj
+   | jsonArr
    | 'true'
    | 'false'
    | 'null'

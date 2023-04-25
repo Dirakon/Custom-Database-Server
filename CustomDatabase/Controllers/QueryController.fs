@@ -2,47 +2,12 @@ namespace CustomDatabase.Controllers
 
 
 open System.Collections.Generic
+open System.ComponentModel.DataAnnotations
+open CustomDatabase
+open CustomDatabase.Value
 open Microsoft.AspNetCore.Mvc
 open Microsoft.Extensions.Logging
-open Newtonsoft.Json
-open Newtonsoft.Json.Linq
 
-
-[<JsonConverter(typeof<ValueResolver>)>]
-type Value =
-        | Int of int
-        | String of string
-        | Bool of bool
-        | List of Value list
-and ValueResolver() =
-    inherit JsonConverter()
-
-    override _.CanConvert(t: System.Type) = t = typedefof<Value>
-
-    override _.WriteJson(writer: JsonWriter, value: obj, serializer: JsonSerializer) =
-
-        let token =
-            match value with
-            | :? Value as value ->
-                match value with
-                | Int x -> JToken.FromObject(x)
-                | String x -> JToken.FromObject(x)
-                | Bool x -> JToken.FromObject(x)
-                | List x -> JToken.FromObject(x, serializer)
-            | _ -> failwith $"ValueResolver resolver can only resolve Value, but was provided with {value}"
-
-        token.WriteTo(writer)
-
-    override _.ReadJson(reader: JsonReader, targetType: System.Type, existingValue: obj, serializer: JsonSerializer) =
-        let token = JToken.Load(reader)
-        match token.Type with
-        | JTokenType.Integer -> Int(token.Value<int>())
-        | JTokenType.String -> String(token.Value<string>())
-        | JTokenType.Boolean -> Bool(token.Value<bool>())
-        | JTokenType.Array -> List(token.ToObject<Value list>(serializer))
-        | _ -> failwith "Invalid value type"
-      
-   
 
 
 
@@ -54,14 +19,19 @@ type QueryController(logger: ILogger<QueryController>) =
     inherit ControllerBase()
 
     [<HttpGet>]
-    member _.Get(query: string) =
+    member _.Get([<Required>] query: string) =
         [ dict [ ("Valv", Int 32); ("Pok", String "ds"); ("Int", List [ Int 32; Int 64 ]) ] ]
 
     [<HttpPost>]
-    member _.Add(query: string) = ""
+    member _.Add([<Required>] query: string) =
+        QueryParser.parseAsCreationQuery (query)
+        |> Result.map (fun context -> context.GetText()) // $"{QueryParser.parseAsCreationQuery(query)}-{QueryParser.parseAsCreationQuery(query)}"
 
     [<HttpPut>]
-    member _.Update(body:Value) = body
+    member _.Update([<Required>] body: Value) =
+
+
+        body
 
     [<HttpDelete>]
-    member _.Delete(query: string) = ""
+    member _.Delete([<Required>] query: string) = ""
