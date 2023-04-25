@@ -12,5 +12,4 @@ public static class QueryLanguage
         CommonTokenStream commonTokenStream = new(lexer);
         return new QueryLanguageParser(commonTokenStream);
     }
-
 }

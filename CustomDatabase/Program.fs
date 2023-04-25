@@ -18,10 +18,6 @@ module Program =
 
         let builder = WebApplication.CreateBuilder(args)
 
-        let info = OpenApiInfo()
-        info.Title <- "My API V1"
-        info.Version <- "v1"
-
         builder.Services
             .AddControllers()
             .AddJsonOptions(fun options ->
@@ -31,6 +27,9 @@ module Program =
 
                 options.JsonSerializerOptions.Converters.Insert(0, ValueResolver()))
 
+        let info = OpenApiInfo()
+        info.Title <- "My API V1"
+        info.Version <- "v1"
         builder.Services.AddSwaggerGen(fun config -> config.SwaggerDoc("v1", info))
 
 

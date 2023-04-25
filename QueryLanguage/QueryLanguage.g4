@@ -1,17 +1,4 @@
 grammar QueryLanguage;
-//@parser::members {
-//  @Override
-//  public void reportError(RecognitionException e) {
-//    throw new RuntimeException("I quit!\n" + e.getMessage()); 
-//  }
-//}
-//
-//@lexer::members {
-//  @Override
-//  public void reportError(RecognitionException e) {
-//    throw new RuntimeException("I quit!\n" + e.getMessage()); 
-//  }
-//}
 /*
  * Parser Rules
  */
@@ -21,8 +8,9 @@ memberDeclaration   :  (memberName ':' type) |  (memberName ':' type '(' constra
 constraintsDeclaration   : ()   |   (constraintDeclaration ',' constraintsDeclaration)|   (constraintDeclaration);
 constraintDeclaration   : UNIQUE; // More constraints?
 memberName          : VARNAME;
-type                : INT | BOOL | list | STRING | FLOAT | ('&' entityName);
+type                : INT | BOOL | list | STRING | FLOAT | pointer;
 list                : '[' type ']';
+pointer             : ('&' entityName);
 entityName          : VARNAME ;
 
 entityAddition      :  entityGroupAddition | entitySingleAddition;
@@ -33,11 +21,16 @@ entityReplacement     :  entityGroupReplacement | entitySingleReplacement;
 entitySingleReplacement     : REPLACE raw_pointer jsonObj;
 entityGroupReplacement     : REPLACE '[' multiple_raw_pointers ']' jsonArr;
 multiple_raw_pointers   : () | (raw_pointer) | (raw_pointer ',' multiple_raw_pointers) ;
-raw_pointer : VARNAME;
+raw_pointer : VARNAME;  // Maybe number?
+
+entityRemoval    :  entityGroupRemoval | entitySingleRemoval;
+entitySingleRemoval     : REMOVE raw_pointer;
+entityGroupRemoval     : REMOVE '[' multiple_raw_pointers ']';
 
 entityRetrieval     :  entityGroupRetrieval | entitySingleRetrieval;
 entitySingleRetrieval     : GET entityName; // TODO: filters?
-entityGroupRetrieval     : GET '[' entityName ']';
+entityGroupRetrieval     : GET '[' entityName ']'; // TODO: filters?
+
 
 jsonObj
    : '{' jsonPair (',' jsonPair)* '}'
@@ -84,6 +77,8 @@ fragment U          : ('U'|'u') ;
 fragment Q          : ('Q'|'q') ;
 fragment D          : ('D'|'d') ;
 fragment P          : ('P'|'p') ;
+fragment M          : ('M'|'m') ;
+fragment V          : ('V'|'v') ;
 fragment LOWERCASE  : [a-z] ;
 fragment UPPERCASE  : [A-Z] ;
 
@@ -121,6 +116,7 @@ SAYS                : S A Y S ;
 CREATE              : C R E A T E ;
 ENTITY              : E N T I T Y ;
 UNIQUE              : U N I Q U E ;
+REMOVE              : R E M O V E;
 DIGIT                : [0-9];
 
 QUOTED_STRING
