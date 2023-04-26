@@ -9,10 +9,9 @@ type DataStorage() =
         member this.addEntities(entityName, entityRows) =
             if (entities |> Seq.tryFind (fun entity -> entity.name = entityName)) = Option.None then
                 //TODO: add, create file, update entities global file: all that
-                lock entities (fun () -> 
-                    let filename = entityName
-                    
-                    )
+                // lock entities (fun () -> 
+                //     let filename = entityName
+                //     )
                 Result.Ok ()
             else
                 Result.Error $"{entityName} already defined"

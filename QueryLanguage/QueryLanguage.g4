@@ -18,14 +18,14 @@ entitySingleAddition      : ADD entityName jsonObj;
 entityGroupAddition      : ADD '[' entityName ']' jsonArr ;
 
 entityReplacement     :  entityGroupReplacement | entitySingleReplacement;
-entitySingleReplacement     : REPLACE raw_pointer jsonObj;
-entityGroupReplacement     : REPLACE '[' multiple_raw_pointers ']' jsonArr;
-multiple_raw_pointers   : () | (raw_pointer) | (raw_pointer ',' multiple_raw_pointers) ;
-raw_pointer : VARNAME;  // Maybe number?
+entitySingleReplacement     : REPLACE rawPointer jsonObj;
+entityGroupReplacement     : REPLACE '[' multipleRawPointers ']' jsonArr;
+multipleRawPointers   : () | (rawPointer) | (rawPointer ',' multipleRawPointers) ;
+rawPointer : VARNAME;  // Maybe number?
 
 entityRemoval    :  entityGroupRemoval | entitySingleRemoval;
-entitySingleRemoval     : REMOVE raw_pointer;
-entityGroupRemoval     : REMOVE '[' multiple_raw_pointers ']';
+entitySingleRemoval     : REMOVE rawPointer;
+entityGroupRemoval     : REMOVE '[' multipleRawPointers ']';
 
 entityRetrieval     :  (entityGroupRetrieval | entitySingleRetrieval) (WHERE booleanExpression)?;
 entitySingleRetrieval     : GET entityName; 
@@ -61,10 +61,16 @@ booleanExpression
    | booleanExpression booleanBinary booleanExpression
    | '(' booleanExpression ')'
    | NOT booleanExpression
-   | (TRUE | 'true')
-   | (FALSE | 'false')
+   | true
+   | false
    | VARNAME
    ;
+   
+// lowercase needs to be specified separately because json uses lower case specifically, which
+// leads to creation of a separate token for it
+true : (TRUE | 'true'); 
+false : (FALSE | 'false');
+
 
 arithmeticExpression
    :  arithmeticExpression  '^' arithmeticExpression
@@ -78,20 +84,21 @@ arithmeticExpression
 arithmeticAtom
    : NUMBER
    | VARNAME
+   | QUOTED_STRING
    ;
 
 arithmeticComparator
    : '='
    | '!='
-   | '>'
-   | '<'
+   | '>' // defined only for numeric?
+   | '<' // defined only for numeric?
    ;
 
 booleanBinary
     : AND
     | OR
     |  '='
-   | '!=';
+    | '!=';
 
 
 
