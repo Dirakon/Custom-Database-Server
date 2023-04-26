@@ -27,9 +27,9 @@ entityRemoval    :  entityGroupRemoval | entitySingleRemoval;
 entitySingleRemoval     : REMOVE raw_pointer;
 entityGroupRemoval     : REMOVE '[' multiple_raw_pointers ']';
 
-entityRetrieval     :  entityGroupRetrieval | entitySingleRetrieval;
-entitySingleRetrieval     : GET entityName; // TODO: filters?
-entityGroupRetrieval     : GET '[' entityName ']'; // TODO: filters?
+entityRetrieval     :  (entityGroupRetrieval | entitySingleRetrieval) (WHERE booleanExpression)?;
+entitySingleRetrieval     : GET entityName; 
+entityGroupRetrieval     : GET '[' entityName ']';
 
 
 jsonObj
@@ -56,6 +56,45 @@ jsonValue
    | 'null'
    ;
 
+booleanExpression
+   : arithmeticExpression arithmeticComparator arithmeticExpression
+   | booleanExpression booleanBinary booleanExpression
+   | '(' booleanExpression ')'
+   | NOT booleanExpression
+   | (TRUE | 'true')
+   | (FALSE | 'false')
+   | VARNAME
+   ;
+
+arithmeticExpression
+   :  arithmeticExpression  '^' arithmeticExpression
+   |  arithmeticExpression  ('*' | '/')  arithmeticExpression
+   |  arithmeticExpression  ('+' | '-') arithmeticExpression
+   |  '(' arithmeticExpression ')'
+   |  ('+'| '-') arithmeticExpression
+   |  arithmeticAtom
+   ;
+
+arithmeticAtom
+   : NUMBER
+   | VARNAME
+   ;
+
+arithmeticComparator
+   : '='
+   | '!='
+   | '>'
+   | '<'
+   ;
+
+booleanBinary
+    : AND
+    | OR
+    |  '='
+   | '!=';
+
+
+
 /*
  * Lexer Rules
  */
@@ -79,9 +118,13 @@ fragment D          : ('D'|'d') ;
 fragment P          : ('P'|'p') ;
 fragment M          : ('M'|'m') ;
 fragment V          : ('V'|'v') ;
+fragment W          : ('W'|'w') ;
+fragment H          : ('H'|'h') ;
 fragment LOWERCASE  : [a-z] ;
 fragment UPPERCASE  : [A-Z] ;
-
+fragment SIGN
+   : ('+' | '-')
+   ;
 fragment ESC
    : '\\' (["\\/bfnrt] | UNICODE)
    ;
@@ -104,6 +147,7 @@ fragment INTEGER_PART
    // integer part forbis leading 0s (e.g. `01`)
    : '0' | [1-9] DIGIT*
    ;
+fragment DIGIT                : [0-9];
    
 GET                 : G E T;
 REPLACE             : R E P L A C E;
@@ -117,7 +161,12 @@ CREATE              : C R E A T E ;
 ENTITY              : E N T I T Y ;
 UNIQUE              : U N I Q U E ;
 REMOVE              : R E M O V E;
-DIGIT                : [0-9];
+OR              : O R;
+AND              : A N D;
+NOT              : N O T;
+WHERE              : W H E R E;
+TRUE              : T R U E;
+FALSE             : F A L S E;
 
 QUOTED_STRING
    : '"' (ESC | SAFECODEPOINT)* '"'
