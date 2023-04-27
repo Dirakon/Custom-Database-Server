@@ -28,7 +28,7 @@ type ValueResolver() =
 
         match token.ValueKind with
         | JsonValueKind.Number -> Int(token.GetInt32())
-        | JsonValueKind.String ->String(token.GetString())
+        | JsonValueKind.String -> String(token.GetString())
         | JsonValueKind.True -> Bool(true)
         | JsonValueKind.False -> Bool(false)
         | JsonValueKind.Array ->
@@ -40,14 +40,12 @@ type ValueResolver() =
         | _ -> failwith "Invalid value type"
 
 module JsonConverter =
-    let addConvertersTo(options:JsonSerializerOptions)=
-                JsonFSharpOptions
-                    .FSharpLuLike()
-                    .AddToJsonSerializerOptions(options)
+    let addConvertersTo (options: JsonSerializerOptions) =
+        JsonFSharpOptions.FSharpLuLike().AddToJsonSerializerOptions(options)
 
-                options.Converters.Insert(0, ValueResolver())
+        options.Converters.Insert(0, ValueResolver())
+
     let createSerializerOptions =
         let options = JsonSerializerOptions()
-        addConvertersTo(options)
+        addConvertersTo (options)
         options
-                

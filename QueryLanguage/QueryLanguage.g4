@@ -31,6 +31,12 @@ entityRetrieval     :  (entityGroupRetrieval | entitySingleRetrieval) (WHERE boo
 entitySingleRetrieval     : GET entityName; 
 entityGroupRetrieval     : GET '[' entityName ']';
 
+// Maybe rename to GET and make CREATE also ADD? This way each HTTP path only corresponds with one keyword.
+// However, that would make it unclear which parsing error to return. Return both? Return none? TODO: Ponder over it
+entityPointerRetrieval     :  (entityPointerSingleRetrieval | entityPointerGroupRetrieval);
+entityPointerSingleRetrieval     : RETRIEVE rawPointer; 
+entityPointerGroupRetrieval     : RETRIEVE '[' multipleRawPointers ']';
+
 
 jsonObj
    : '{' jsonPair (',' jsonPair)* '}'
@@ -56,6 +62,18 @@ jsonValue
    | 'null'
    ;
 
+//TODO: clear up the ambiguity between boolean and arithmetic when booleans are concerned
+// (VARNAME, for instance can be ambigous).
+// Furthermore, currently it's impossible to do any arithmetic operations with booleans which could potentially show up
+// in arithmeticExpression (can this even happen in a valid query?)
+// VARNAME = (VARNAME = VARNAME) is probably proccessed in a valid manner even now?
+// VARNAME = (VARNAME = (VARNAME AND true)) might(?) throw error because of AND/true in arithmetic expression, 
+// even though it should be valid .
+// ---
+// Possile (easy) fix: remove boolean type from entities.
+// Possile (easy) fix: remove '=' and '!=' operators from booleans. <- sounds ok
+// Possile (hard) fix: unify boolean and arithemtic expressions (a lot more checks needed then).
+// ---
 booleanExpression
    : arithmeticExpression arithmeticComparator arithmeticExpression
    | booleanExpression booleanBinary booleanExpression
@@ -73,11 +91,11 @@ false : (FALSE | 'false');
 
 
 arithmeticExpression
-   :  arithmeticExpression  '^' arithmeticExpression
-   |  arithmeticExpression  ('*' | '/')  arithmeticExpression
-   |  arithmeticExpression  ('+' | '-') arithmeticExpression
+   :  arithmeticExpression  power arithmeticExpression
+   |  arithmeticExpression  (multplication | division)  arithmeticExpression
+   |  arithmeticExpression  (plus| minus) arithmeticExpression
    |  '(' arithmeticExpression ')'
-   |  ('+'| '-') arithmeticExpression
+   |  (plus| minus) arithmeticExpression
    |  arithmeticAtom
    ;
 
@@ -85,22 +103,35 @@ arithmeticAtom
    : NUMBER
    | VARNAME
    | QUOTED_STRING
+   | true
+   | false
    ;
 
 arithmeticComparator
-   : '='
-   | '!='
-   | '>' // defined only for numeric?
-   | '<' // defined only for numeric?
+   : equal
+   | notEqual
+   | gt // defined only for numeric?
+   | lt // defined only for numeric?
    ;
 
 booleanBinary
     : AND
     | OR
-    |  '='
-    | '!=';
+    |  equal
+    | notEqual;
 
-
+// Explicit operator naming to differentiate in the code
+plus: '+';
+minus: '-';
+multplication: '*';
+division: '/';
+power: '^';
+equal: '=';
+notEqual: '!=';
+gt: '>';
+gte: '>=';
+lt: '<';
+lte: '<=';
 
 /*
  * Lexer Rules
@@ -156,6 +187,7 @@ fragment INTEGER_PART
    ;
 fragment DIGIT                : [0-9];
    
+RETRIEVE                 : R E T R I E V E;
 GET                 : G E T;
 REPLACE             : R E P L A C E;
 BOOL                : B O O L;

@@ -3,7 +3,6 @@ namespace CustomDatabase
 #nowarn "20"
 
 open System.Text.Json.Serialization
-open CustomDatabase.Value
 open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting

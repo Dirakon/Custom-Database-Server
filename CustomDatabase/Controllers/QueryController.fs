@@ -8,7 +8,7 @@ open CustomDatabase.Value
 open GeneratedLanguage
 open Microsoft.AspNetCore.Mvc
 open Microsoft.Extensions.Logging
-
+open CustomDatabase.Antlr
 
 
 
@@ -24,11 +24,11 @@ type QueryController(logger: ILogger<QueryController>) =
     member _.ExecuteAdditionRequest(context: QueryLanguageParser.EntityAdditionContext) = Result.Ok "ADDED" //TODO
 
 
-    [<HttpGet>]
+    [<HttpGet>] //TODO: do literal RETRIEVE query
     member this.Retrieve([<Required>] query: string) =
         query
         |> QueryParser.parseAsRetrievalQuery
-        |> Result.map QueryParser.getContextTextSeparatedBySpace // TODO
+        |> Result.map (fun query -> query.getTextSeparatedBySpace ()) // TODO
 
 
     [<HttpPost>]
@@ -54,10 +54,10 @@ type QueryController(logger: ILogger<QueryController>) =
     member this.Replace([<Required>] query: string) =
         query
         |> QueryParser.parseAsReplacementQuery
-        |> Result.map QueryParser.getContextTextSeparatedBySpace // TODO
+        |> Result.map (fun query -> query.getTextSeparatedBySpace ()) // TODO
 
     [<HttpDelete>]
     member this.Remove([<Required>] query: string) =
         query
         |> QueryParser.parseAsRemovalQuery
-        |> Result.map QueryParser.getContextTextSeparatedBySpace // TODO
+        |> Result.map (fun query -> query.getTextSeparatedBySpace ()) // TODO

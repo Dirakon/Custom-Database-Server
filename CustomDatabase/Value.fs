@@ -10,7 +10,7 @@ type Value =
     | String of string
     | Bool of bool
     | List of Value list
-    member this.GetTypeName  = 
-        match FSharpValue.GetUnionFields(this, this.GetType()) with
-        | case, _ -> case.Name  
 
+    member this.TypeName =
+        match FSharpValue.GetUnionFields(this, this.GetType()) with
+        | case, _ -> case.Name

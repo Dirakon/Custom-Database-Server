@@ -1,9 +1,6 @@
 namespace CustomDatabase
 
-open System
-open System.Linq
 open Antlr4.Runtime
-open Antlr4.Runtime.Tree
 open CustomDatabase.ThrowErrorListener
 
 module QueryParser =
@@ -22,14 +19,6 @@ module QueryParser =
         with error ->
             Result.Error(error.Message)
 
-    let rec getContextTextSeparatedBySpace (context: IParseTree) =
-        match context with
-        | :? ITerminalNode as terminalNode -> terminalNode.GetText()
-        | _ ->
-            Enumerable.Range(0, context.ChildCount)
-            |> Seq.map (fun childIndex -> getContextTextSeparatedBySpace(context.GetChild(childIndex)).Trim())
-            |> Seq.filter (fun child -> not (String.IsNullOrWhiteSpace(child)))
-            |> Seq.fold (fun a b -> if a = "" then b else a + " " + b) ""
 
     let parseAsAdditionQuery query =
         parseAsContext (query, (fun parser -> parser.entityAddition ()))
