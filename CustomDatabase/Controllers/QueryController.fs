@@ -28,7 +28,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
     [<HttpGet>] //TODO: do literal RETRIEVE query
     member this.Retrieve([<Required>] query: string) =
         // TODO
-        dataStorage.addEntities (string ('s'), [])
+        dataStorage.addEntities (string 's', [])
 
         query
         |> QueryParser.parseAsRetrievalQuery

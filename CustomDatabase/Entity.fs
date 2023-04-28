@@ -32,18 +32,22 @@ module EntityInstance =
         |> Seq.append [ ("pointer", String(instance.pointer)) ]
         |> dict
 
-    let correspondsWithDefinition (instance: EntityInstance, definition: Entity) : bool =
-        if not (instance.pointer.StartsWith(definition.name)) then // TODO: use different (more efficient) pointer construction/checking logic?
-            false
-        else if instance.values.Length <> definition.columns.Length then
+    let valuesCorrespondWithDefinition (values: Value list, definition: Entity) : bool =
+        if values.Length <> definition.columns.Length then
             false
         else
             let columnTypes = definition.columns |> Seq.map (fun column -> column.``type``)
 
-            instance.values
+            values
             |> Seq.map (fun value -> value.TypeName)
             |> Seq.zip columnTypes
             |> Seq.forall (fun (columnType, actualType) -> columnType = actualType)
+
+    let correspondsWithDefinition (instance: EntityInstance, definition: Entity) : bool =
+        if not (instance.pointer.StartsWith(definition.name)) then // TODO: use different (more efficient) pointer construction/checking logic?
+            false
+        else
+            valuesCorrespondWithDefinition (instance.values, definition)
 
     let extractIndexFromPointer (entityDefinition: Entity, pointer: string) =
         int (pointer.Substring(entityDefinition.name.Length))
