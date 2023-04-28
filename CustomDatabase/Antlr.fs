@@ -13,5 +13,11 @@ type IParseTree with
         | _ ->
             Enumerable.Range(0, this.ChildCount)
             |> Seq.map (fun childIndex -> this.GetChild(childIndex).getTextSeparatedBySpace().Trim())
-            |> Seq.filter (fun child -> not (String.IsNullOrWhiteSpace(child)))
-            |> Seq.fold (fun a b -> if a = "" then b else a + " " + b) ""
+            |> Seq.filter (not << String.IsNullOrWhiteSpace)
+            |> Seq.fold
+                (fun accumulator element ->
+                    if accumulator = "" then
+                        element
+                    else
+                        accumulator + " " + element)
+                ""

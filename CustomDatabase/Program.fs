@@ -2,7 +2,6 @@ namespace CustomDatabase
 
 #nowarn "20"
 
-open System.Text.Json.Serialization
 open Microsoft.AspNetCore.Builder
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
@@ -14,23 +13,18 @@ module Program =
 
     [<EntryPoint>]
     let main args =
-
         let builder = WebApplication.CreateBuilder(args)
 
         builder.Services
             .AddControllers()
-            .AddJsonOptions(fun options ->
-                JsonFSharpOptions
-                    .FSharpLuLike()
-                    .AddToJsonSerializerOptions(options.JsonSerializerOptions)
-
-                options.JsonSerializerOptions.Converters.Insert(0, ValueResolver()))
+            .AddJsonOptions(fun options -> JsonConverter.addConvertersTo (options.JsonSerializerOptions))
 
         let info = OpenApiInfo()
         info.Title <- "My API V1"
         info.Version <- "v1"
         builder.Services.AddSwaggerGen(fun config -> config.SwaggerDoc("v1", info))
 
+        builder.Services.AddSingleton<IDataStorage, DataStorage>()
 
         let app = builder.Build()
 

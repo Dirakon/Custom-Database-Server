@@ -5,6 +5,7 @@ open System.Collections.Generic
 open System.ComponentModel.DataAnnotations
 open CustomDatabase
 open CustomDatabase.Value
+open CustomDatabase.Expressions
 open GeneratedLanguage
 open Microsoft.AspNetCore.Mvc
 open Microsoft.Extensions.Logging
@@ -16,7 +17,7 @@ type Row = Dictionary<string, Value>
 
 [<ApiController>]
 [<Route("[controller]")>]
-type QueryController(logger: ILogger<QueryController>) =
+type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage) =
     inherit ControllerBase()
 
     // TODO: place in different file/class all actual executions
@@ -26,9 +27,12 @@ type QueryController(logger: ILogger<QueryController>) =
 
     [<HttpGet>] //TODO: do literal RETRIEVE query
     member this.Retrieve([<Required>] query: string) =
+        // TODO
+        dataStorage.addEntities (string ('s'), [])
+
         query
         |> QueryParser.parseAsRetrievalQuery
-        |> Result.map (fun query -> query.getTextSeparatedBySpace ()) // TODO
+        |> Result.bind (fun context -> tryEvaluateBoolean (context.booleanExpression (), dict []))
 
 
     [<HttpPost>]

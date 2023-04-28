@@ -41,11 +41,11 @@ type ValueResolver() =
 
 module JsonConverter =
     let addConvertersTo (options: JsonSerializerOptions) =
+        options.Converters.Add(ValueResolver())
         JsonFSharpOptions.FSharpLuLike().AddToJsonSerializerOptions(options)
 
-        options.Converters.Insert(0, ValueResolver())
 
-    let createSerializerOptions =
+    let serializerOptions =
         let options = JsonSerializerOptions()
         addConvertersTo (options)
         options

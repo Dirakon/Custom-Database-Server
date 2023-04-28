@@ -26,7 +26,7 @@ module Expressions =
         variables
         |> Seq.tryFind (fun (KeyValue(name, value)) -> name = variableName)
         |> Option.map (fun (KeyValue(name, value)) -> value)
-        |> (fun option -> option.toResult $"Could not find the field {variableName}!")
+        |> (fun option -> option.toResult $"Could not find the field '{variableName}'!")
 
     let rec valuesEqual (value1: Value, value2: Value) =
         match (value1, value2) with
@@ -53,7 +53,7 @@ module Expressions =
         | Int int1, Int int2 when notNull (operator.lt ()) -> Result.Ok(int1 < int2)
         | _ ->
             Result.Error(
-                $"Cannot apply operator {operator.getTextSeparatedBySpace ()} to types {value1.TypeName} and {value2.TypeName}"
+                $"Cannot apply operator '{operator.getTextSeparatedBySpace ()}' to types {value1.TypeName} and {value2.TypeName}"
             )
 
     let tryExtractValueFromAtom (atom: QueryLanguageParser.ArithmeticAtomContext) variables =
@@ -70,7 +70,7 @@ module Expressions =
         else if notNull (atom.``false`` ()) then
             Result.Ok(Bool false)
         else
-            Result.Error $"Cannot identify arithmetic atom: ${atom.GetText()}"
+            Result.Error $"Cannot identify arithmetic atom: '{atom.GetText()}'"
 
     let rec tryEvaluateArithmetic
         (
@@ -85,7 +85,7 @@ module Expressions =
             || (expression.arithmeticExpression().Length = 0)
         then
             Result.Error
-                $"Cannot evaluate expression {expression.getTextSeparatedBySpace ()}: not an arithmetic unit, and not a combination of arithmetic expressions"
+                $"Cannot evaluate expression '{expression.getTextSeparatedBySpace ()}': not an arithmetic unit, and not a combination of arithmetic expressions"
         else if expression.arithmeticExpression().Length = 2 then
             result {
                 let! expr1 = tryEvaluateArithmetic (expression.arithmeticExpression().[0], variables)
@@ -102,7 +102,7 @@ module Expressions =
                     | String str1, String str2 when notNull (expression.plus ()) -> Result.Ok(String(str1 + str2))
                     | _ ->
                         Result.Error
-                            $"Cannot evaluate expression {expression.getTextSeparatedBySpace ()}: operation not permitted for types {expr1.TypeName} and {expr2.TypeName}"
+                            $"Cannot evaluate expression '{expression.getTextSeparatedBySpace ()}': operation not permitted for types {expr1.TypeName} and {expr2.TypeName}"
             }
         else if expression.arithmeticExpression().Length = 1 then
             result {
@@ -119,7 +119,7 @@ module Expressions =
                     | value -> Result.Ok value
             }
         else
-            Result.Error $"Cannot evaluate expression {expression.getTextSeparatedBySpace ()}"
+            Result.Error $"Cannot evaluate expression '{expression.getTextSeparatedBySpace ()}'"
 
     let compareBoolean (value1: bool, operator: QueryLanguageParser.BooleanBinaryContext, value2: bool) =
         if notNull (operator.OR()) then
@@ -131,7 +131,7 @@ module Expressions =
         else if notNull (operator.notEqual ()) then
             Result.Ok <| not (value1 = value2)
         else
-            Result.Error($"Undefined binary boolean operator: {operator.GetText()}")
+            Result.Error($"Undefined binary boolean operator: '{operator.GetText()}'")
 
     let rec tryEvaluateBoolean
         (
@@ -151,7 +151,7 @@ module Expressions =
                 | Bool booleanValue -> Result.Ok(booleanValue)
                 | _ ->
                     Result.Error(
-                        $"Cannot treat the field {variableName} as a boolean expression (type found: {value.TypeName})!"
+                        $"Cannot treat the field '{variableName}' as a boolean expression (type found: {value.TypeName})!"
                     ))
         else if notNull (expression.NOT()) then
             // NOT token only appears when there is a single boolean expression to negate
@@ -176,4 +176,4 @@ module Expressions =
                 return! compareArithmetic (expr1, expression.arithmeticComparator (), expr2)
             }
         else
-            Result.Error($"Cannot handle binary expression: {expression.getTextSeparatedBySpace ()}")
+            Result.Error($"Cannot handle binary expression: '{expression.getTextSeparatedBySpace ()}'")
