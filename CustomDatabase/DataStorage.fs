@@ -5,7 +5,9 @@ open System.IO
 open System.Text.Json
 open CustomDatabase.MiscExtensions
 open CustomDatabase.Value
+open FsToolkit.ErrorHandling
 open Microsoft.AspNetCore.Hosting
+open Microsoft.FSharp.Collections
 
 
 type DataStorage(webHostEnvironment: IWebHostEnvironment) =
@@ -56,7 +58,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
 
         entityRows
         |> List.mapi (fun index row ->
-            { pointer = getNthNewPointer (index)
+            { pointer = getNthNewPointer index
               values = row })
 
     let appendEntityRowsToFileUnchecked (entityRows: Value list list, entityDefinition: Entity) : Result<unit, string> =
@@ -97,7 +99,9 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
             |> Result.bind (fun entityDefinition -> appendEntityRowsToFileUnchecked (entityRows, entityDefinition))
 
         member this.createEntity(entityDescription) =
-            if not (isEntityDefined entityDescription) then
+            if isEntityDefined entityDescription then
+                Result.Error $"'{entityDescription.name}' is already defined"
+            else
 
                 lock entities (fun () ->
                     entities <- (entityDescription :: entities)
@@ -108,5 +112,27 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
 
                         use localFileStream = File.OpenWrite(entityFilePath entityDescription.name)
                         JsonSerializer.Serialize(localFileStream, [], jsonSerializerOptions)))
-            else
-                Result.Error $"'{entityDescription.name}' is already defined"
+
+        member this.getEntities(entityName, maybeFilteringFunction) =
+            getEntityByName entityName
+            |> Option.toResult $"'{entityName}' is not defined"
+            |> Result.bind (fun entityDefinition ->
+                Result.fromThrowingFunction (fun () ->
+                    use readFileStream = File.OpenRead(entityFilePath entityName)
+
+                    let entityInstances: EntityInstance list =
+                        JsonSerializer.Deserialize(readFileStream, jsonSerializerOptions)
+
+                    let entityToLabeledValues =
+                        (fun instance -> EntityInstance.getLabeledValues (instance, entityDefinition))
+
+                    match maybeFilteringFunction with
+                    | None -> Result.Ok <| List.map entityToLabeledValues entityInstances
+                    | Some filteringFunction ->
+                        entityInstances
+                        |> List.filterResultM (fun instance ->
+                            EntityInstance.expressionHolds (instance, entityDefinition, filteringFunction))
+                        |> Result.map (List.map entityToLabeledValues)
+
+                ))
+            |> Result.flatten

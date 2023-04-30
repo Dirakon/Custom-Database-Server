@@ -49,3 +49,9 @@ module JsonConverter =
         let options = JsonSerializerOptions()
         addConvertersTo (options)
         options
+
+    let parseSingleRow (rawJson: string) : Value list =
+        JsonSerializer.Deserialize(rawJson, serializerOptions)
+
+    let parseMultipleRows (rawJson: string) : Value list list =
+        JsonSerializer.Deserialize(rawJson, serializerOptions)
