@@ -2,6 +2,9 @@ grammar QueryLanguage;
 /*
  * Parser Rules
  */
+ 
+someQuery : entityCreation | entityAddition | entityReplacement | entityRemoval | entitySelection | entityRetrieval | entityDropping;
+ 
 entityCreation      : CREATE ENTITY entityName '{' membersDeclaration '}' ;
 membersDeclaration  : () | (memberDeclaration ',' membersDeclaration)| (memberDeclaration);
 memberDeclaration   :  (memberName ':' type) |  (memberName ':' type '(' constraintsDeclaration ')');
@@ -12,6 +15,8 @@ type                : INT | BOOL | list | STRING | FLOAT | pointer;
 list                : '[' type ']';
 pointer             : ('&' entityName);
 entityName          : VARNAME ;
+
+entityDropping      : DROP ENTITY entityName;
 
 entityAddition      :  entityGroupAddition | entitySingleAddition;
 entitySingleAddition      : ADD entityName jsonObj;
@@ -27,15 +32,13 @@ entityRemoval    :  entityGroupRemoval | entitySingleRemoval;
 entitySingleRemoval     : REMOVE rawPointer;
 entityGroupRemoval     : REMOVE '[' multipleRawPointers ']';
 
-entityRetrieval     :  (entityGroupRetrieval | entitySingleRetrieval) (WHERE booleanExpression)?;
-entitySingleRetrieval     : GET entityName; 
-entityGroupRetrieval     : GET '[' entityName ']';
+entitySelection     :  (entityGroupSelection | entitySingleSelection) (WHERE booleanExpression)?;
+entitySingleSelection     : GET entityName; 
+entityGroupSelection     : GET '[' entityName ']';
 
-// Maybe rename to GET and make CREATE also ADD? This way each HTTP path only corresponds with one keyword.
-// However, that would make it unclear which parsing error to return. Return both? Return none? TODO: Ponder over it
-entityPointerRetrieval     :  (entityPointerSingleRetrieval | entityPointerGroupRetrieval);
-entityPointerSingleRetrieval     : RETRIEVE rawPointer; 
-entityPointerGroupRetrieval     : RETRIEVE '[' multipleRawPointers ']';
+entityRetrieval     :  (entitySingleRetrieval | entityGroupRetrieval);
+entitySingleRetrieval     : RETRIEVE rawPointer; 
+entityGroupRetrieval     : RETRIEVE '[' multipleRawPointers ']';
 
 
 jsonObj
@@ -65,10 +68,11 @@ jsonValue
 //TODO: clear up the ambiguity between boolean and arithmetic when booleans are concerned
 // (VARNAME, for instance can be ambigous).
 // Furthermore, currently it's impossible to do any arithmetic operations with booleans which could potentially show up
-// in arithmeticExpression (can this even happen in a valid query?)
+// in arithmeticExpression (can this even happen in a valid query? Give an example)
 // VARNAME = (VARNAME = VARNAME) is probably proccessed in a valid manner even now?
 // VARNAME = (VARNAME = (VARNAME AND true)) might(?) throw error because of AND/true in arithmetic expression, 
-// even though it should be valid .
+// even though it should be valid.
+// UPD: both things above work perfectly fine. Potentlially there could still be some edge-cases that don't work?
 // ---
 // Possile (easy) fix: remove boolean type from entities.
 // Possile (easy) fix: remove '=' and '!=' operators from booleans. <- sounds ok
@@ -129,9 +133,9 @@ power: '^';
 equal: '=';
 notEqual: '!=';
 gt: '>';
-gte: '>=';
+gte: '>='; // too lazy to implement. TODO: become not lazy
 lt: '<';
-lte: '<=';
+lte: '<='; // too lazy to implement. TODO: become not lazy
 
 /*
  * Lexer Rules
@@ -189,6 +193,7 @@ fragment DIGIT                : [0-9];
    
 RETRIEVE                 : R E T R I E V E;
 GET                 : G E T;
+DROP                 : D R O P ;
 REPLACE             : R E P L A C E;
 BOOL                : B O O L;
 ADD                : A D D;

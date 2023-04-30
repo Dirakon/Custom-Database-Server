@@ -13,8 +13,11 @@ type IDataStorage =
     // entity pointer should somehow contain both entity type and entity id
 
     abstract createEntity: Entity -> Result<unit, string>
-    abstract addEntities: string * (Value list) list -> Result<unit, string>
+    abstract addEntities: string * IDictionary<string, Value> list -> Result<unit, string>
+    abstract replaceEntities: string list * IDictionary<string, Value> list -> Result<unit, string>
 
-    abstract getEntities:
+    abstract selectEntities:
         string * Option<QueryLanguageParser.BooleanExpressionContext> -> Result<IDictionary<string, Value> list, string>
+
+    abstract retrieveEntities: string list -> Result<IDictionary<string, Value> list, string>
 //  abstract removeEntities: Entity*(Value list) list -> Result<unit,string>

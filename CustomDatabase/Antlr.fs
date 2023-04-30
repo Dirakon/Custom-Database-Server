@@ -3,6 +3,7 @@ module CustomDatabase.Antlr
 open System
 open System.Linq
 open Antlr4.Runtime.Tree
+open Microsoft.FSharp.Core
 
 
 type IParseTree with
@@ -14,10 +15,4 @@ type IParseTree with
             Enumerable.Range(0, this.ChildCount)
             |> Seq.map (fun childIndex -> this.GetChild(childIndex).getTextSeparatedBySpace().Trim())
             |> Seq.filter (not << String.IsNullOrWhiteSpace)
-            |> Seq.fold
-                (fun accumulator element ->
-                    if accumulator = "" then
-                        element
-                    else
-                        accumulator + " " + element)
-                ""
+            |> String.concat " "

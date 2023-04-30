@@ -2,6 +2,7 @@ namespace CustomDatabase
 
 
 open System.Collections.Generic
+open CustomDatabase.MiscExtensions
 open CustomDatabase.Value
 open GeneratedLanguage
 
@@ -51,6 +52,12 @@ module EntityInstance =
 
     let extractIndexFromPointer (entityDefinition: Entity, pointer: string) =
         int (pointer.Substring(entityDefinition.name.Length))
+
+    let rec extractEntityNameFromPointer (pointer: string) =
+        if pointer |> String.endsWithDigit then
+            extractEntityNameFromPointer (pointer.Substring(0, pointer.Length - 1))
+        else
+            pointer
 
     let expressionHolds
         (

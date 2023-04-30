@@ -1,5 +1,6 @@
 namespace CustomDatabase
 
+open System.Collections.Generic
 open System.Text.Json
 open System.Text.Json.Serialization
 open CustomDatabase.Value
@@ -7,10 +8,7 @@ open CustomDatabase.Value
 type ValueResolver() =
     inherit JsonConverter<Value>()
 
-    override _.CanConvert(t: System.Type) =
-        // Comparing by namespace because both typeof and typedef of don't work consistently on union types:
-        // Sometimes it shows as Value+List (or similar) instead of Value
-        t.Namespace = typeof<Value>.Namespace
+    override _.CanConvert(t: System.Type) = t = typeof<Value>
 
 
     override _.Write(writer: Utf8JsonWriter, value: Value, options: JsonSerializerOptions) =
@@ -50,8 +48,11 @@ module JsonConverter =
         addConvertersTo (options)
         options
 
-    let parseSingleRow (rawJson: string) : Value list =
+    let parseSingleRow (rawJson: string) : IDictionary<string, Value> =
         JsonSerializer.Deserialize(rawJson, serializerOptions)
 
-    let parseMultipleRows (rawJson: string) : Value list list =
+    let parseMultipleRows (rawJson: string) : IDictionary<string, Value> list =
         JsonSerializer.Deserialize(rawJson, serializerOptions)
+
+    let inline serialize something =
+        JsonSerializer.SerializeToElement(something, serializerOptions)

@@ -7,15 +7,15 @@
     <ItemGroup>
         <Compile Include="MiscExtensions.fs"/>
         <Compile Include="Antlr.fs"/>
+        <Compile Include="ThrowErrorListener.fs"/>
         <Compile Include="Value.fs"/>
-        <Compile Include="Expressions.fs"/>
         <Compile Include="JsonConverter.fs"/>
+        <Compile Include="Expressions.fs"/>
         <Compile Include="Entity.fs"/>
         <Compile Include="IDataStorage.fs"/>
         <Compile Include="DataStorage.fs"/>
-        <Compile Include="ThrowErrorListener.fs"/>
         <Compile Include="QueryParser.fs"/>
-        <Compile Include="Controllers\QueryController.fs"/>
+        <Compile Include="QueryController.fs"/>
         <Compile Include="Program.fs"/>
     </ItemGroup>
 

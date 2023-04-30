@@ -9,6 +9,17 @@ type Option<'ok> with
         | Some value -> Result.Ok value
         | None -> Result.Error errorValue
 
+module Char =
+    let isDigit (character: char) : bool = character >= '0' && character <= '9'
+
+module String =
+    let endsWithDigit (str: string) : bool =
+        if str.Length = 0 then
+            false
+        else
+            let lastChar = str[str.Length - 1]
+            Char.isDigit lastChar
+
 module Option =
     let toResult<'ok, 'err> (errorValue: 'err) (option: Option<'ok>) = option.toResult (errorValue)
 
@@ -22,7 +33,10 @@ module Result =
             ("Exception Raised: " + e.Message + "\n" + e.Source) |> Result.Error
 
 module List =
-    let filterResultM<'a, 'b> (filteringFunction: ('a) -> Result<bool, 'b>) (list: 'a list) : Result<'a list, 'b> =
+    let filterResultM<'ok, 'err>
+        (filteringFunction: 'ok -> Result<bool, 'err>)
+        (list: 'ok list)
+        : Result<'ok list, 'err> =
         result {
             let! itemsAndFilteringFunctionResults =
                 list

@@ -19,18 +19,5 @@ module QueryParser =
         with error ->
             Result.Error(error.Message)
 
-
-    let parseAsAdditionQuery query =
-        parseAsContext (query, (fun parser -> parser.entityAddition ()))
-
-    let parseAsRetrievalQuery query =
-        parseAsContext (query, (fun parser -> parser.entityRetrieval ()))
-
-    let parseAsRemovalQuery query =
-        parseAsContext (query, (fun parser -> parser.entityRemoval ()))
-
-    let parseAsCreationQuery query =
-        parseAsContext (query, (fun parser -> parser.entityCreation ()))
-
-    let parseAsReplacementQuery query =
-        parseAsContext (query, (fun parser -> parser.entityReplacement ()))
+    let parseAsSomeQuery query =
+        parseAsContext (query, (fun parser -> parser.someQuery ()))
