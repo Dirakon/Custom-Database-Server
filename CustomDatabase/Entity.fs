@@ -40,9 +40,8 @@ module EntityInstance =
             let columnTypes = definition.columns |> Seq.map (fun column -> column.``type``)
 
             values
-            |> Seq.map (fun value -> value.TypeName)
             |> Seq.zip columnTypes
-            |> Seq.forall (fun (columnType, actualType) -> columnType = actualType)
+            |> Seq.forall (fun (columnType, value) -> Value.valueDescribedIsOfType value columnType)
 
     let correspondsWithDefinition (instance: EntityInstance, definition: Entity) : bool =
         if not (instance.pointer.StartsWith(definition.name)) then // TODO: use different (more efficient) pointer construction/checking logic?

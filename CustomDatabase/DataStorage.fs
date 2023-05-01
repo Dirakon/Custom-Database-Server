@@ -26,6 +26,24 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
 
     let jsonSerializerOptions = JsonConverter.serializerOptions
 
+    let readEntityInstances entityName =
+        Result.fromThrowingFunction (fun () ->
+            use readFileStream = File.OpenRead(entityFilePath entityName)
+
+            let entityInstances: EntityInstance list =
+                JsonSerializer.Deserialize(readFileStream, jsonSerializerOptions)
+
+            entityInstances)
+
+    let writeEntityInstances entityName entities =
+        Result.fromThrowingFunction (fun () ->
+            File.Delete(entityFilePath entityName)
+            use writeFileStream = File.OpenWrite(entityFilePath entityName)
+
+            JsonSerializer.Serialize(writeFileStream, entities, jsonSerializerOptions)
+
+        )
+
     do
         lock entities (fun () ->
             if File.Exists(globalEntityInfoFilePath) then
@@ -85,24 +103,18 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
                 ))
 
         allUniqueValuesForEachUniqueColumn
-        |> Seq.forall (fun uniqueValuesForAColumn -> uniqueValuesForAColumn.Count = entities.Length)
-        |> not
+        |> Seq.exists (fun uniqueValuesForAColumn -> uniqueValuesForAColumn.Count <> entities.Length)
 
     let tryAppendEntityRowsToFileUnchecked
         (
             entityRows: Value list list,
             entityDefinition: Entity
-        ) : Result<unit, string> =
+        ) : Result<string list, string> =
         let entityName = entityDefinition.name
 
         lock entityDefinition (fun () ->
-            Result.fromThrowingFunction (fun () ->
-                use readFileStream = File.OpenRead(entityFilePath entityName)
-
-                let previousEntityInstances: EntityInstance list =
-                    JsonSerializer.Deserialize(readFileStream, jsonSerializerOptions)
-
-                readFileStream.Close()
+            result {
+                let! previousEntityInstances = readEntityInstances entityName
 
                 let newEntityInstances =
                     entityRowsToEntityInstances (previousEntityInstances, entityDefinition, entityRows)
@@ -110,15 +122,11 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
                 let allEntities = newEntityInstances |> List.append previousEntityInstances
 
                 if hasDuplicateValuesOnUniqueColumns (allEntities, entityDefinition) then
-                    Result.Error "Some unique column has duplicate elements!"
+                    return! Result.Error "Some 'unique'-constrained column has duplicate elements!"
                 else
-                    File.Delete(entityFilePath entityName)
-                    use writeFileStream = File.OpenWrite(entityFilePath entityName)
-
-                    JsonSerializer.Serialize(writeFileStream, allEntities, jsonSerializerOptions)
-
-                    Result.Ok())
-            |> Result.flatten)
+                    let! _ = writeEntityInstances entityName allEntities
+                    return (newEntityInstances |> List.map (fun instance -> instance.pointer))
+            })
 
     let unlabelEntityRow
         (
@@ -136,6 +144,12 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
                 |> Option.map (fun (KeyValue(name, value)) -> value)
                 |> Option.toResult $"Could not find a column named '{column.name}' on entity '{entityDefinition.name}'")
             |> List.sequenceResultM
+
+    let unlabelEntityRows entityDefinition entityRows =
+        entityRows
+        |> List.map (fun labeledEntityRow -> unlabelEntityRow (labeledEntityRow, entityDefinition))
+        |> List.sequenceResultM
+
 
     let rec tryReplaceEntities
         (
@@ -165,10 +179,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
             result {
                 let! entityDefinition = getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
 
-                let! unlabeledEntityRows =
-                    entityRows
-                    |> List.map (fun labeledEntityRow -> unlabelEntityRow (labeledEntityRow, entityDefinition))
-                    |> List.sequenceResultM
+                let! unlabeledEntityRows = unlabelEntityRows entityDefinition entityRows
 
                 if
                     unlabeledEntityRows
@@ -199,18 +210,14 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
                         JsonSerializer.Serialize(localFileStream, [], jsonSerializerOptions)))
 
         member this.selectEntities(entityName, maybeFilteringFunction) =
-            getEntityByName entityName
-            |> Option.toResult $"'{entityName}' is not defined"
-            |> Result.bind (fun entityDefinition ->
-                Result.fromThrowingFunction (fun () ->
-                    use readFileStream = File.OpenRead(entityFilePath entityName)
+            result {
+                let! entityDefinition = getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
+                let! entityInstances = readEntityInstances entityName
 
-                    let entityInstances: EntityInstance list =
-                        JsonSerializer.Deserialize(readFileStream, jsonSerializerOptions)
+                let entityToLabeledValues =
+                    (fun instance -> EntityInstance.getLabeledValues (instance, entityDefinition))
 
-                    let entityToLabeledValues =
-                        (fun instance -> EntityInstance.getLabeledValues (instance, entityDefinition))
-
+                return!
                     match maybeFilteringFunction with
                     | None -> Result.Ok <| List.map entityToLabeledValues entityInstances
                     | Some filteringFunction ->
@@ -219,8 +226,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
                             EntityInstance.expressionHolds (instance, entityDefinition, filteringFunction))
                         |> Result.map (List.map entityToLabeledValues)
 
-                ))
-            |> Result.flatten
+            }
 
         member this.retrieveEntities(pointers) =
             match pointers with
@@ -232,28 +238,22 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
                     let! entityDefinition =
                         getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
 
+                    let! entityInstances = readEntityInstances entityName
+
                     let entityToLabeledValues =
                         (fun instance -> EntityInstance.getLabeledValues (instance, entityDefinition))
 
                     return!
-                        Result.fromThrowingFunction (fun () ->
-                            use readFileStream = File.OpenRead(entityFilePath entityName)
+                        pointers
+                        |> List.map (fun pointer -> EntityInstance.extractIndexFromPointer (entityDefinition, pointer))
+                        |> List.map (fun index ->
+                            entityInstances
+                            |> Seq.tryFind (fun instance ->
+                                EntityInstance.extractIndexFromPointer (entityDefinition, instance.pointer) = index)
+                            |> Option.toResult $"Cannot find element by the index {index}")
+                        |> List.sequenceResultM
+                        |> Result.map (List.map entityToLabeledValues)
 
-                            let entityInstances: EntityInstance list =
-                                JsonSerializer.Deserialize(readFileStream, jsonSerializerOptions)
-
-                            pointers
-                            |> List.map (fun pointer ->
-                                EntityInstance.extractIndexFromPointer (entityDefinition, pointer))
-                            |> List.map (fun index ->
-                                entityInstances
-                                |> Seq.tryItem index
-                                |> Option.toResult $"Cannot find element by the index {index}")
-                            |> List.sequenceResultM
-                            |> Result.map (List.map entityToLabeledValues)
-
-                        )
-                        |> Result.flatten
                 }
 
         member this.replaceEntities(pointers, entitiesToAdd) =
@@ -265,41 +265,26 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
                 | somePointer :: otherPointers ->
                     let entityName = EntityInstance.extractEntityNameFromPointer somePointer
 
-                    Result.fromThrowingFunction (fun () ->
-                        result {
-                            let! entityDefinition =
-                                getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
+                    result {
+                        let! entityDefinition =
+                            getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
 
-                            let! unlabeledEntityRows =
-                                entitiesToAdd
-                                |> List.map (fun labeledEntityRow ->
-                                    unlabelEntityRow (labeledEntityRow, entityDefinition))
-                                |> List.sequenceResultM
+                        let! entityInstances = readEntityInstances entityName
+                        let! unlabeledEntityRows = unlabelEntityRows entityDefinition entitiesToAdd
 
-                            use readFileStream = File.OpenRead(entityFilePath entityName)
 
-                            let entityInstances: EntityInstance list =
-                                JsonSerializer.Deserialize(readFileStream, jsonSerializerOptions)
+                        let pointerIndices =
+                            pointers
+                            |> List.map (fun pointer ->
+                                EntityInstance.extractIndexFromPointer (entityDefinition, pointer))
 
-                            readFileStream.Close()
+                        let replacementEntitiesSortedByIndex =
+                            unlabeledEntityRows |> List.zip pointerIndices |> List.sortBy fst
 
-                            let pointerIndices =
-                                pointers
-                                |> List.map (fun pointer ->
-                                    EntityInstance.extractIndexFromPointer (entityDefinition, pointer))
+                        let! updatedEntities =
+                            tryReplaceEntities (entityDefinition, entityInstances, replacementEntitiesSortedByIndex)
 
-                            let replacementEntitiesSortedByIndex =
-                                unlabeledEntityRows |> List.zip pointerIndices |> List.sortBy fst
+                        return! writeEntityInstances entityName updatedEntities
+                    }
 
-                            let! updatedEntities =
-                                tryReplaceEntities (
-                                    entityDefinition,
-                                    entityInstances,
-                                    replacementEntitiesSortedByIndex
-                                )
-
-                            File.Delete(entityFilePath entityName)
-                            use writeFileStream = File.OpenWrite(entityFilePath entityName)
-                            JsonSerializer.Serialize(writeFileStream, updatedEntities, jsonSerializerOptions)
-                        })
-                    |> Result.flatten
+        member this.getEntityDefinitions() = entities

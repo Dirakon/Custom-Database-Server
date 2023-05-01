@@ -21,119 +21,14 @@ type Row = Dictionary<string, Value>
 [<Route("[controller]")>]
 type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage) =
     inherit ControllerBase()
-    // TODO: place in different file/class all actual query executions
 
-    let rec processAndAggregateRecursiveStructure
-        (
-            someStructure: 'structure,
-            singleElementExtractor: ('structure -> 'single),
-            otherElementsExtractor: ('structure -> 'structure),
-            processingFunction: ('single -> Result<'processedSingle, 'err>),
-            aggregationFunction: ('processedSingle -> 'processedMultiple -> Result<'processedMultiple, 'err>),
-            defaultValue: 'processedMultiple
-        ) : Result<'processedMultiple, 'err> =
-        match someStructure with
-        | null -> Result.Ok defaultValue
-        | _ ->
-            result {
-                let! otherElementsOutput =
-                    processAndAggregateRecursiveStructure (
-                        otherElementsExtractor someStructure,
-                        singleElementExtractor,
-                        otherElementsExtractor,
-                        processingFunction,
-                        aggregationFunction,
-                        defaultValue
-                    )
-
-                let! thisElementProcessed = someStructure |> singleElementExtractor |> processingFunction
-                let! elementsAggregated = aggregationFunction thisElementProcessed otherElementsOutput
-                return elementsAggregated
-            }
-
-
-    let aggregateConstraints (constraintText: string) otherConstraints =
-        let lowerConstraint = constraintText.ToLower()
-
-        match lowerConstraint with
-        | "unique" -> Result.Ok { otherConstraints with unique = true }
-        | _ -> Result.Error $"Unknown constraint keyword: {lowerConstraint}"
-
-    let parseConstraintsRecursively (constraintsDeclaration: QueryLanguageParser.ConstraintsDeclarationContext) =
-        processAndAggregateRecursiveStructure (
-            constraintsDeclaration,
-            (fun constraints -> constraints.constraintDeclaration ()),
-            (fun constraints -> constraints.constraintsDeclaration ()),
-            (fun constraintContext -> Result.Ok(constraintContext.GetText())),
-            aggregateConstraints,
-            ColumnConstraints.emptyConstraints
-        )
-
-    let parseType (``type``: string) =
-        if ``type``.Length = 0 then
-            Result.Error "Cannot have an empty type"
-        else
-            let lowerType = ``type``.ToLower()
-
-            let typeWithCapitalizedStart =
-                lowerType[0].ToString().ToUpper() + lowerType.Substring(1)
-
-            if Value.isValidType typeWithCapitalizedStart then
-                Result.Ok typeWithCapitalizedStart
-            else
-                Result.Error $"Unknown type: '{typeWithCapitalizedStart}'"
-
-    let parseColumn (memberDeclaration: QueryLanguageParser.MemberDeclarationContext) =
-        result {
-            let! constraints = parseConstraintsRecursively (memberDeclaration.constraintsDeclaration ())
-            let! ``type`` = parseType (memberDeclaration.``type``().GetText())
-
-            return
-                { name = memberDeclaration.memberName().GetText()
-                  ``type`` = ``type``
-                  constraints = constraints }
-        }
-
-
-    let parseColumnsRecursively (membersDeclaration: QueryLanguageParser.MembersDeclarationContext) =
-        processAndAggregateRecursiveStructure (
-            membersDeclaration,
-            (fun constraints -> constraints.memberDeclaration ()),
-            (fun constraints -> constraints.membersDeclaration ()),
-            parseColumn,
-            (fun singleItem otherItems -> Result.Ok(singleItem :: otherItems)),
-            []
-        )
-
-    let parseEntity (context: QueryLanguageParser.EntityCreationContext) =
-        let entityName = context.entityName().GetText()
-
-        result {
-            let! columns = parseColumnsRecursively (context.membersDeclaration ())
-            let uniqueColumnNames = HashSet(columns |> Seq.map (fun column -> column.name))
-
-            if uniqueColumnNames.Count < columns.Length then
-                return! Result.Error "Detected duplicate column names!"
-            else if uniqueColumnNames.Contains("pointer") then
-                return! Result.Error "Detected a column named 'pointer', which is not allowed!"
-            else
-                return { name = entityName; columns = columns }
-        }
-
-
-    let parsePointersRecursively (pointers: QueryLanguageParser.MultipleRawPointersContext) =
-        processAndAggregateRecursiveStructure (
-            pointers,
-            (fun pointers -> pointers.rawPointer ()),
-            (fun pointers -> pointers.multipleRawPointers ()),
-            (fun pointer -> Result.Ok <| pointer.GetText()),
-            (fun singleItem otherItems -> Result.Ok(singleItem :: otherItems)),
-            []
-        )
 
     let executeCreationRequest (context: QueryLanguageParser.EntityCreationContext) =
         result {
-            let! describedEntity = parseEntity context
+            let entityNames =
+                dataStorage.getEntityDefinitions () |> List.map (fun entity -> entity.name)
+
+            let! describedEntity = QueryParser.parseEntity (context, entityNames)
             return! dataStorage.createEntity describedEntity
         }
         |> Result.map (fun _ -> "Successful!")
@@ -143,7 +38,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
         result {
             if notNull (context.entitySingleAddition ()) then
                 let additionRequest = context.entitySingleAddition ()
-                let entityName = additionRequest.entityName().GetText()
+                let entityName = additionRequest.entityName().GetText().ToLower()
 
                 return!
                     dataStorage.addEntities (
@@ -152,7 +47,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
                     )
             else if notNull (context.entityGroupAddition ()) then
                 let additionRequest = context.entityGroupAddition ()
-                let entityName = additionRequest.entityName().GetText()
+                let entityName = additionRequest.entityName().GetText().ToLower()
 
                 return!
                     dataStorage.addEntities (
@@ -162,11 +57,10 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
             else
                 return! Result.Error $"Cannot analyze query type of '{context.getTextSeparatedBySpace ()}'"
         }
-        |> Result.map (fun _ -> "Successful!")
         |> Result.map JsonConverter.serialize
 
 
-    let executeReplacementQuery (replacementQuery: QueryLanguageParser.EntityReplacementContext) =
+    let executeReplacementRequest (replacementQuery: QueryLanguageParser.EntityReplacementContext) =
         result {
 
             if notNull (replacementQuery.entitySingleReplacement ()) then
@@ -181,7 +75,9 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
                     )
             else if notNull (replacementQuery.entityGroupReplacement ()) then
                 let! pointers =
-                    parsePointersRecursively (replacementQuery.entityGroupReplacement().multipleRawPointers ())
+                    QueryParser.parsePointersRecursively (
+                        replacementQuery.entityGroupReplacement().multipleRawPointers ()
+                    )
 
                 return!
                     dataStorage.replaceEntities (
@@ -193,6 +89,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
             else
                 return! Result.Error $"Cannot analyze query type of '{replacementQuery.getTextSeparatedBySpace ()}'"
         }
+        |> Result.map (fun _ -> "Successful!")
         |> Result.map JsonConverter.serialize
 
     let executeRetrievalRequest (retrievalQuery: QueryLanguageParser.EntityRetrievalContext) =
@@ -202,7 +99,9 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
                 let pointer = retrievalQuery.entitySingleRetrieval().rawPointer().GetText()
                 return! dataStorage.retrieveEntities ([ pointer ])
             else if notNull (retrievalQuery.entityGroupRetrieval ()) then
-                let! pointers = parsePointersRecursively (retrievalQuery.entityGroupRetrieval().multipleRawPointers ())
+                let! pointers =
+                    QueryParser.parsePointersRecursively (retrievalQuery.entityGroupRetrieval().multipleRawPointers ())
+
                 return! dataStorage.retrieveEntities (pointers)
             else
                 return! Result.Error $"Cannot analyze query type of '{retrievalQuery.getTextSeparatedBySpace ()}'"
@@ -221,7 +120,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
             if notNull (getQuery.entitySingleSelection ()) then
                 let! allSelectedEntities =
                     dataStorage.selectEntities (
-                        getQuery.entitySingleSelection().entityName().GetText(),
+                        getQuery.entitySingleSelection().entityName().GetText().ToLower(),
                         filteringFunction
                     )
 
@@ -232,7 +131,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
             else if notNull (getQuery.entityGroupSelection ()) then
                 return!
                     dataStorage.selectEntities (
-                        getQuery.entityGroupSelection().entityName().GetText(),
+                        getQuery.entityGroupSelection().entityName().GetText().ToLower(),
                         filteringFunction
                     )
             else
@@ -254,7 +153,9 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
                 elif notNull (parsedQuery.entitySelection ()) then
                     executeSelectionRequest (parsedQuery.entitySelection ())
                 elif notNull (parsedQuery.entityReplacement ()) then
-                    executeReplacementQuery (parsedQuery.entityReplacement ())
+                    executeReplacementRequest (parsedQuery.entityReplacement ())
+                elif notNull (parsedQuery.entityRetrieval ()) then
+                    executeRetrievalRequest (parsedQuery.entityRetrieval ())
                 else
                     Result.Error("Cannot identify the query type!")
 
