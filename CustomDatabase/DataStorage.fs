@@ -9,13 +9,14 @@ open CustomDatabase.Value
 open FsToolkit.ErrorHandling
 open FsToolkit.ErrorHandling.Operator.Option
 open Microsoft.AspNetCore.Hosting
+open Microsoft.Extensions.Logging
 open Microsoft.FSharp.Collections
 open FsToolkit.ErrorHandling.Operator.Result
 open Microsoft.FSharp.Core
 
 
 
-type DataStorage(webHostEnvironment: IWebHostEnvironment) =
+type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataStorage>) =
     let dataFolderPath = Path.Join(webHostEnvironment.ContentRootPath, "data")
     let globalEntityInfoFilePath = Path.Join(dataFolderPath, "entity.json")
 
@@ -50,6 +51,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment) =
                 use fileStream = File.OpenRead(globalEntityInfoFilePath)
                 entities <- JsonSerializer.Deserialize(fileStream, jsonSerializerOptions)
             else
+                logger.LogInformation "No entity information file found! First initialization..."
                 Directory.CreateDirectory(dataFolderPath) |> ignore
                 use fileStream = File.OpenWrite(globalEntityInfoFilePath)
                 JsonSerializer.Serialize(fileStream, entities, jsonSerializerOptions))

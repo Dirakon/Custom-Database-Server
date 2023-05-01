@@ -11,7 +11,7 @@ module QueryParser =
     let parseAsContext<'a when 'a :> ParserRuleContext>
         (
             query: string,
-            contextSelection: GeneratedLanguage.QueryLanguageParser -> 'a
+            contextSelection: QueryLanguageParser -> 'a
         ) : Result<'a, string> =
         let parser = QueryLanguage.QueryLanguage.GetParser(query)
         parser.RemoveErrorListeners()

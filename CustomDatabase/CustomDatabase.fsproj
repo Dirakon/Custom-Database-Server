@@ -5,37 +5,37 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="MiscExtensions.fs"/>
-        <Compile Include="Antlr.fs"/>
-        <Compile Include="ThrowErrorListener.fs"/>
-        <Compile Include="Value.fs"/>
-        <Compile Include="JsonConverter.fs"/>
-        <Compile Include="Expressions.fs"/>
-        <Compile Include="Entity.fs"/>
-        <Compile Include="IDataStorage.fs"/>
-        <Compile Include="DataStorage.fs"/>
-        <Compile Include="QueryParser.fs"/>
-        <Compile Include="QueryController.fs"/>
-        <Compile Include="Program.fs"/>
+        <Compile Include="MiscExtensions.fs" />
+        <Compile Include="Antlr.fs" />
+        <Compile Include="ThrowErrorListener.fs" />
+        <Compile Include="Value.fs" />
+        <Compile Include="JsonConverter.fs" />
+        <Compile Include="Expressions.fs" />
+        <Compile Include="Entity.fs" />
+        <Compile Include="IDataStorage.fs" />
+        <Compile Include="DataStorage.fs" />
+        <Compile Include="QueryParser.fs" />
+        <Compile Include="QueryController.fs" />
+        <Compile Include="Program.fs" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="FSharp.SystemTextJson" Version="1.1.23"/>
-        <PackageReference Include="FsToolkit.ErrorHandling" Version="4.6.0"/>
-        <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.2.7"/>
-        <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.2.0"/>
-        <PackageReference Include="Microsoft.AspNetCore.Hosting.Server.Abstractions" Version="2.2.0"/>
-        <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2"/>
-        <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.2.0"/>
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5"/>
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="7.0.3"/>
-        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.3"/>
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0"/>
-        <PackageReference Update="FSharp.Core" Version="7.0.300-beta.23176.1"/>
+        <PackageReference Include="FSharp.SystemTextJson" Version="1.1.23" />
+        <PackageReference Include="FsToolkit.ErrorHandling" Version="4.6.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.2.7" />
+        <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Hosting.Server.Abstractions" Version="2.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
+        <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="7.0.3" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.3" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+        <PackageReference Update="FSharp.Core" Version="7.0.300-beta.23176.1" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\QueryLanguage\QueryLanguage.csproj"/>
+        <ProjectReference Include="..\QueryLanguage\QueryLanguage.csproj" />
     </ItemGroup>
 
 
