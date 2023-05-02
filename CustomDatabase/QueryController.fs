@@ -4,6 +4,7 @@ namespace CustomDatabase.Controllers
 open System.Collections.Generic
 open System.ComponentModel.DataAnnotations
 open CustomDatabase
+open CustomDatabase.MiscExtensions
 open CustomDatabase.Value
 open CustomDatabase.Expressions
 open GeneratedLanguage
@@ -36,26 +37,13 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
 
     let executeAdditionRequest (context: QueryLanguageParser.EntityAdditionContext) =
         result {
-            if notNull (context.entitySingleAddition ()) then
-                let additionRequest = context.entitySingleAddition ()
-                let entityName = additionRequest.entityName().GetText().ToLower()
+            let entityName = context.entityName().getValidName ()
 
-                return!
-                    dataStorage.addEntities (
-                        entityName,
-                        [ JsonConverter.parseSingleRow (additionRequest.jsonObj().getTextSeparatedBySpace ()) ]
-                    )
-            else if notNull (context.entityGroupAddition ()) then
-                let additionRequest = context.entityGroupAddition ()
-                let entityName = additionRequest.entityName().GetText().ToLower()
-
-                return!
-                    dataStorage.addEntities (
-                        entityName,
-                        JsonConverter.parseMultipleRows (additionRequest.jsonArr().getTextSeparatedBySpace ())
-                    )
-            else
-                return! Result.Error $"Cannot analyze query type of '{context.getTextSeparatedBySpace ()}'"
+            return!
+                dataStorage.addEntities (
+                    entityName,
+                    JsonConverter.parseMultipleRows (context.jsonArr().getTextSeparatedBySpace ())
+                )
         }
         |> Result.map JsonConverter.serialize
 
@@ -63,31 +51,13 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
     let executeReplacementRequest (replacementQuery: QueryLanguageParser.EntityReplacementContext) =
         result {
 
-            if notNull (replacementQuery.entitySingleReplacement ()) then
-                let pointer = replacementQuery.entitySingleReplacement().rawPointer().GetText()
+            let! pointers = QueryParser.parsePointersRecursively (replacementQuery.multipleRawPointers ())
 
-                return!
-                    dataStorage.replaceEntities (
-                        [ pointer ],
-                        [ JsonConverter.parseSingleRow (
-                              replacementQuery.entitySingleReplacement().jsonObj().getTextSeparatedBySpace ()
-                          ) ]
-                    )
-            else if notNull (replacementQuery.entityGroupReplacement ()) then
-                let! pointers =
-                    QueryParser.parsePointersRecursively (
-                        replacementQuery.entityGroupReplacement().multipleRawPointers ()
-                    )
-
-                return!
-                    dataStorage.replaceEntities (
-                        pointers,
-                        JsonConverter.parseMultipleRows (
-                            replacementQuery.entityGroupReplacement().jsonArr().getTextSeparatedBySpace ()
-                        )
-                    )
-            else
-                return! Result.Error $"Cannot analyze query type of '{replacementQuery.getTextSeparatedBySpace ()}'"
+            return!
+                dataStorage.replaceEntities (
+                    pointers,
+                    JsonConverter.parseMultipleRows (replacementQuery.jsonArr().getTextSeparatedBySpace ())
+                )
         }
         |> Result.map (fun _ -> "Successful!")
         |> Result.map JsonConverter.serialize
@@ -95,55 +65,44 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
     let executeRetrievalRequest (retrievalQuery: QueryLanguageParser.EntityRetrievalContext) =
         result {
 
-            if notNull (retrievalQuery.entitySingleRetrieval ()) then
-                let pointer = retrievalQuery.entitySingleRetrieval().rawPointer().GetText()
-                return! dataStorage.retrieveEntities ([ pointer ])
-            else if notNull (retrievalQuery.entityGroupRetrieval ()) then
-                let! pointers =
-                    QueryParser.parsePointersRecursively (retrievalQuery.entityGroupRetrieval().multipleRawPointers ())
+            let! pointers = QueryParser.parsePointersRecursively (retrievalQuery.multipleRawPointers ())
 
-                return! dataStorage.retrieveEntities (pointers)
-            else
-                return! Result.Error $"Cannot analyze query type of '{retrievalQuery.getTextSeparatedBySpace ()}'"
+            return! dataStorage.retrieveEntities pointers
         }
         |> Result.map JsonConverter.serialize
 
     let executeSelectionRequest (getQuery: QueryLanguageParser.EntitySelectionContext) =
         result {
 
-            let filteringFunction =
-                if notNull (getQuery.booleanExpression ()) then
-                    Some(getQuery.booleanExpression ())
-                else
-                    None
+            let filteringFunction = Option.fromNullable (getQuery.booleanExpression ())
 
-            if notNull (getQuery.entitySingleSelection ()) then
-                let! allSelectedEntities =
-                    dataStorage.selectEntities (
-                        getQuery.entitySingleSelection().entityName().GetText().ToLower(),
-                        filteringFunction
-                    )
-
-                return!
-                    match allSelectedEntities with
-                    | [] -> Result.Error "No entities found!"
-                    | firstEntity :: _ -> Result.Ok [ firstEntity ]
-            else if notNull (getQuery.entityGroupSelection ()) then
-                return!
-                    dataStorage.selectEntities (
-                        getQuery.entityGroupSelection().entityName().GetText().ToLower(),
-                        filteringFunction
-                    )
-            else
-                return! Result.Error $"Cannot analyze query type of '{getQuery.getTextSeparatedBySpace ()}'"
+            return! dataStorage.selectEntities (getQuery.entityName().getValidName (), filteringFunction)
         }
+        |> Result.map JsonConverter.serialize
+
+    let executeDroppingRequest (context: QueryLanguageParser.EntityDroppingContext) =
+        result {
+            let entityName = context.entityName().getValidName ()
+
+            return! dataStorage.dropEntity (entityName)
+        }
+        |> Result.map (fun _ -> "Successful!")
+        |> Result.map JsonConverter.serialize
+
+    let executeRemovalRequest (context: QueryLanguageParser.EntityRemovalContext) =
+        result {
+            let! pointers = QueryParser.parsePointersRecursively (context.multipleRawPointers ())
+
+            return! dataStorage.removeEntities (pointers)
+        }
+        |> Result.map (fun _ -> "Successful!")
         |> Result.map JsonConverter.serialize
 
 
     [<HttpGet>]
     member this.ExecuteQuery([<Required>] query: string) =
         result {
-            let! parsedQuery = QueryParser.parseAsSomeQuery (query)
+            let! parsedQuery = QueryParser.parseAsSomeQuery query
 
             return!
                 if notNull (parsedQuery.entityAddition ()) then
@@ -156,6 +115,10 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
                     executeReplacementRequest (parsedQuery.entityReplacement ())
                 elif notNull (parsedQuery.entityRetrieval ()) then
                     executeRetrievalRequest (parsedQuery.entityRetrieval ())
+                elif notNull (parsedQuery.entityRemoval ()) then
+                    executeRemovalRequest (parsedQuery.entityRemoval ())
+                elif notNull (parsedQuery.entityDropping ()) then
+                    executeDroppingRequest (parsedQuery.entityDropping ())
                 else
                     Result.Error("Cannot identify the query type!")
 

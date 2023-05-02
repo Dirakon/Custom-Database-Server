@@ -21,7 +21,13 @@ module String =
             Char.isDigit lastChar
 
 module Option =
-    let toResult<'ok, 'err> (errorValue: 'err) (option: Option<'ok>) = option.toResult (errorValue)
+    let toResult<'ok, 'err> (errorValue: 'err) (option: Option<'ok>) = option.toResult errorValue
+
+    let fromNullable nullableObject =
+        match nullableObject with
+        | null -> None
+        | _ -> Some(nullableObject)
+
 
 module Result =
     let flatten (result: Result<Result<'a, 'b>, 'b>) = result |> Result.bind id
@@ -40,7 +46,7 @@ module List =
         result {
             let! itemsAndFilteringFunctionResults =
                 list
-                |> List.map (fun item -> filteringFunction (item) |> Result.map (fun res -> (item, res)))
+                |> List.map (fun item -> filteringFunction item |> Result.map (fun res -> (item, res)))
                 |> List.sequenceResultM
 
             return itemsAndFilteringFunctionResults |> List.filter snd |> List.map fst

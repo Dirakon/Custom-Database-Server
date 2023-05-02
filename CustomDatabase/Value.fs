@@ -18,7 +18,7 @@ type Value =
     member this.AsIdentifyingString =
         match this with
         | Int i -> string i
-        | String s -> s
+        | String s -> "\"" + s + "\""
         | Bool b -> string b
         | List values ->
             "["

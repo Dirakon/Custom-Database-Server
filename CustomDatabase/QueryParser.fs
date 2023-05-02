@@ -2,7 +2,7 @@ namespace CustomDatabase
 
 open System.Collections.Generic
 open Antlr4.Runtime
-open CustomDatabase.ThrowErrorListener
+open CustomDatabase.Antlr
 open CustomDatabase.Value
 open FsToolkit.ErrorHandling
 open GeneratedLanguage
@@ -29,21 +29,23 @@ module QueryParser =
     let rec processAndAggregateRecursiveStructure
         (
             someStructure: 'structure,
-            singleElementExtractor: ('structure -> 'single),
-            otherElementsExtractor: ('structure -> 'structure),
-            processingFunction: ('single -> Result<'processedSingle, 'err>),
-            aggregationFunction: ('processedSingle -> 'processedMultiple -> Result<'processedMultiple, 'err>),
+            singleElementExtractor: 'structure -> 'single,
+            otherElementsExtractor: 'structure -> 'structure,
+            recursionEndFunction: 'structure -> bool,
+            processingFunction: 'single -> Result<'processedSingle, 'err>,
+            aggregationFunction: 'processedSingle -> 'processedMultiple -> Result<'processedMultiple, 'err>,
             defaultValue: 'processedMultiple
         ) : Result<'processedMultiple, 'err> =
-        match someStructure with
-        | null -> Result.Ok defaultValue
-        | _ ->
+        if (recursionEndFunction someStructure) then
+            Result.Ok defaultValue
+        else
             result {
                 let! otherElementsOutput =
                     processAndAggregateRecursiveStructure (
                         otherElementsExtractor someStructure,
                         singleElementExtractor,
                         otherElementsExtractor,
+                        recursionEndFunction,
                         processingFunction,
                         aggregationFunction,
                         defaultValue
@@ -67,6 +69,7 @@ module QueryParser =
             constraintsDeclaration,
             (fun constraints -> constraints.constraintDeclaration ()),
             (fun constraints -> constraints.constraintsDeclaration ()),
+            (fun constraints -> constraints = null || constraints.constraintDeclaration () = null),
             (fun constraintContext -> Result.Ok(constraintContext.GetText())),
             aggregateConstraints,
             ColumnConstraints.emptyConstraints
@@ -99,15 +102,16 @@ module QueryParser =
         ) =
         processAndAggregateRecursiveStructure (
             membersDeclaration,
-            (fun constraints -> constraints.memberDeclaration ()),
-            (fun constraints -> constraints.membersDeclaration ()),
+            (fun declaration -> declaration.memberDeclaration ()),
+            (fun declaration -> declaration.membersDeclaration ()),
+            (fun declaration -> declaration = null || declaration.memberDeclaration () = null),
             parseColumn entityNames,
             (fun singleItem otherItems -> Result.Ok(singleItem :: otherItems)),
             []
         )
 
     let parseEntity (context: QueryLanguageParser.EntityCreationContext, entityNames: string list) =
-        let entityName = context.entityName().GetText().ToLower()
+        let entityName = context.entityName().getValidName ()
         let entityNamesIncludingSelf = entityName :: entityNames
 
         result {
@@ -134,6 +138,7 @@ module QueryParser =
             pointers,
             (fun pointers -> pointers.rawPointer ()),
             (fun pointers -> pointers.multipleRawPointers ()),
+            (fun pointers -> pointers = null || pointers.rawPointer () = null),
             (fun pointer -> Result.Ok <| pointer.GetText()),
             (fun singleItem otherItems -> Result.Ok(singleItem :: otherItems)),
             []

@@ -18,27 +18,17 @@ entityName          : VARNAME ;
 
 entityDropping      : DROP ENTITY entityName;
 
-entityAddition      :  entityGroupAddition | entitySingleAddition;
-entitySingleAddition      : ADD entityName jsonObj;
-entityGroupAddition      : ADD '[' entityName ']' jsonArr ;
+entityAddition      :  ADD '[' entityName ']' jsonArr;
 
-entityReplacement     :  entityGroupReplacement | entitySingleReplacement;
-entitySingleReplacement     : REPLACE rawPointer jsonObj;
-entityGroupReplacement     : REPLACE '[' multipleRawPointers ']' jsonArr;
+entityReplacement     :  REPLACE '[' multipleRawPointers ']' jsonArr;
 multipleRawPointers   : () | (rawPointer) | (rawPointer ',' multipleRawPointers) ;
 rawPointer : VARNAME;  // Maybe number?
 
-entityRemoval    :  entityGroupRemoval | entitySingleRemoval;
-entitySingleRemoval     : REMOVE rawPointer;
-entityGroupRemoval     : REMOVE '[' multipleRawPointers ']';
+entityRemoval    :  REMOVE '[' multipleRawPointers ']';
 
-entitySelection     :  (entityGroupSelection | entitySingleSelection) (WHERE booleanExpression)?;
-entitySingleSelection     : GET entityName; 
-entityGroupSelection     : GET '[' entityName ']';
+entitySelection     :   GET '[' entityName ']' (WHERE booleanExpression)?;
 
-entityRetrieval     :  (entitySingleRetrieval | entityGroupRetrieval);
-entitySingleRetrieval     : RETRIEVE rawPointer; 
-entityGroupRetrieval     : RETRIEVE '[' multipleRawPointers ']';
+entityRetrieval     :   RETRIEVE '[' multipleRawPointers ']';
 
 
 jsonObj
@@ -114,8 +104,11 @@ arithmeticAtom
 arithmeticComparator
    : equal
    | notEqual
-   | gt // defined only for numeric?
-   | lt // defined only for numeric?
+   // defined only for numeric
+   | gt 
+   | lt 
+   | gte 
+   | lte
    ;
 
 booleanBinary
@@ -133,9 +126,9 @@ power: '^';
 equal: '=';
 notEqual: '!=';
 gt: '>';
-gte: '>='; // too lazy to implement. TODO: become not lazy
+gte: '>='; 
 lt: '<';
-lte: '<='; // too lazy to implement. TODO: become not lazy
+lte: '<=';
 
 /*
  * Lexer Rules
@@ -200,7 +193,6 @@ ADD                : A D D;
 INT                : I N T ;
 STRING                : S T R I N G;
 FLOAT                : F L O A T;
-SAYS                : S A Y S ;
 CREATE              : C R E A T E ;
 ENTITY              : E N T I T Y ;
 UNIQUE              : U N I Q U E ;

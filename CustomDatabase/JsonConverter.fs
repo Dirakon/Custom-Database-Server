@@ -45,7 +45,7 @@ module JsonConverter =
 
     let serializerOptions =
         let options = JsonSerializerOptions()
-        addConvertersTo (options)
+        addConvertersTo options
         options
 
     let parseSingleRow (rawJson: string) : IDictionary<string, Value> =

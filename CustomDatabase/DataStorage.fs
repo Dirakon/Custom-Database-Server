@@ -45,6 +45,16 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
         )
 
+    let removeEntityInstances entityName =
+        Result.fromThrowingFunction (fun () -> File.Delete(entityFilePath entityName))
+
+    let updateEntityListWith newEntities =
+        Result.fromThrowingFunction (fun () ->
+            File.Delete(globalEntityInfoFilePath)
+            use globalFileStream = File.OpenWrite(globalEntityInfoFilePath)
+            JsonSerializer.Serialize(globalFileStream, newEntities, jsonSerializerOptions)
+            entities <- newEntities)
+
     do
         lock entities (fun () ->
             if File.Exists(globalEntityInfoFilePath) then
@@ -153,11 +163,27 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
         |> List.sequenceResultM
 
 
+    let rec tryRemoveEntities
+        (
+            entityDefinition: Entity,
+            entityList: EntityInstance list,
+            removalIndices: int list
+        ) : Result<EntityInstance list, string> =
+        match entityList, removalIndices with
+        | [], (unusedIndex :: _) -> Result.Error $"Could not find entity with index '{unusedIndex}'"
+        | entities, [] -> Result.Ok entities
+        | potentialEntity :: otherPotentialEntities, index :: otherRemovalIndices ->
+            if EntityInstance.extractIndexFromPointer (entityDefinition, potentialEntity.pointer) = index then
+                tryRemoveEntities (entityDefinition, otherPotentialEntities, otherRemovalIndices)
+            else
+                tryRemoveEntities (entityDefinition, otherPotentialEntities, removalIndices)
+                |> Result.map (List.append [ potentialEntity ])
+
     let rec tryReplaceEntities
         (
             entityDefinition: Entity,
             entityList: EntityInstance list,
-            sortedReplacementEntities: (int * (Value list)) list
+            sortedReplacementEntities: (int * Value list) list
         ) : Result<EntityInstance list, string> =
         match entityList, sortedReplacementEntities with
         | [], (index, nextReplacementEntity) :: otherReplacementEntities ->
@@ -202,14 +228,12 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
             else
 
                 lock entities (fun () ->
-                    entities <- (entityDescription :: entities)
+                    let newEntities = (entityDescription :: entities)
 
-                    Result.fromThrowingFunction (fun () ->
-                        use globalFileStream = File.OpenWrite(globalEntityInfoFilePath)
-                        JsonSerializer.Serialize(globalFileStream, entities, jsonSerializerOptions)
-
-                        use localFileStream = File.OpenWrite(entityFilePath entityDescription.name)
-                        JsonSerializer.Serialize(localFileStream, [], jsonSerializerOptions)))
+                    result {
+                        let! _ = updateEntityListWith newEntities
+                        return! writeEntityInstances entityDescription.name []
+                    })
 
         member this.selectEntities(entityName, maybeFilteringFunction) =
             result {
@@ -258,8 +282,8 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
                 }
 
-        member this.replaceEntities(pointers, entitiesToAdd) =
-            if entitiesToAdd.Length <> pointers.Length then
+        member this.replaceEntities(pointers, replacementEntities) =
+            if replacementEntities.Length <> pointers.Length then
                 Result.Error "Pointer and entities count differ!"
             else
                 match pointers with
@@ -272,7 +296,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                             getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
 
                         let! entityInstances = readEntityInstances entityName
-                        let! unlabeledEntityRows = unlabelEntityRows entityDefinition entitiesToAdd
+                        let! unlabeledEntityRows = unlabelEntityRows entityDefinition replacementEntities
 
 
                         let pointerIndices =
@@ -290,3 +314,35 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                     }
 
         member this.getEntityDefinitions() = entities
+
+        member this.dropEntity(entityName) =
+            match (getEntityByName entityName) with
+            | None -> Result.Error $"'{entityName}' is not defined"
+            | Some entityDefinition ->
+                lock entities (fun () ->
+                    result {
+                        let newEntities = entities |> List.filter (fun entity -> entity.name <> entityName)
+                        let! _ = updateEntityListWith newEntities
+                        return! removeEntityInstances entityName
+                    })
+
+        member this.removeEntities(pointers) =
+            match pointers with
+            | [] -> Result.Ok()
+            | somePointer :: otherPointers ->
+                let entityName = EntityInstance.extractEntityNameFromPointer somePointer
+
+                result {
+                    let! entityDefinition =
+                        getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
+
+                    let! entityInstances = readEntityInstances entityName
+
+                    let sortedPointerIndices =
+                        pointers
+                        |> List.map (fun pointer -> EntityInstance.extractIndexFromPointer (entityDefinition, pointer))
+                        |> List.sort
+
+                    let! updatedEntities = tryRemoveEntities (entityDefinition, entityInstances, sortedPointerIndices)
+                    return! writeEntityInstances entityName updatedEntities
+                }

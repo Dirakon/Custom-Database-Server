@@ -47,10 +47,12 @@ module Expressions =
 
     let compareArithmetic (value1: Value, operator: QueryLanguageParser.ArithmeticComparatorContext, value2: Value) =
         match (value1, value2) with
-        | value1, value2 when notNull (operator.notEqual ()) -> valuesEqual (value1, value2) |> Result.map (not)
+        | value1, value2 when notNull (operator.notEqual ()) -> valuesEqual (value1, value2) |> Result.map not
         | value1, value2 when notNull (operator.equal ()) -> valuesEqual (value1, value2)
         | Int int1, Int int2 when notNull (operator.gt ()) -> Result.Ok(int1 > int2)
         | Int int1, Int int2 when notNull (operator.lt ()) -> Result.Ok(int1 < int2)
+        | Int int1, Int int2 when notNull (operator.gte ()) -> Result.Ok(int1 >= int2)
+        | Int int1, Int int2 when notNull (operator.lte ()) -> Result.Ok(int1 <= int2)
         | _ ->
             Result.Error(
                 $"Cannot apply operator '{operator.getTextSeparatedBySpace ()}' to types {value1.TypeName} and {value2.TypeName}"
@@ -156,7 +158,7 @@ module Expressions =
         else if notNull (expression.NOT()) then
             // NOT token only appears when there is a single boolean expression to negate
             tryEvaluateBoolean (expression.booleanExpression().[0], variables)
-            |> Result.map (not)
+            |> Result.map not
         else if notNull (expression.booleanBinary ()) then
             // booleanBinary token only appears when there are exactly two boolean expressions to combine
             result {

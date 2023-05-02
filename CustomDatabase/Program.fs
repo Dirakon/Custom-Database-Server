@@ -17,7 +17,7 @@ module Program =
 
         builder.Services
             .AddControllers()
-            .AddJsonOptions(fun options -> JsonConverter.addConvertersTo (options.JsonSerializerOptions))
+            .AddJsonOptions(fun options -> JsonConverter.addConvertersTo options.JsonSerializerOptions)
 
         let info = OpenApiInfo()
         info.Title <- "My API V1"
