@@ -13,6 +13,7 @@ You can create custom entities (SQL tables) with specified types. Apart from pri
 ### Dependencies
 
 * [dotnet7](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
+* [java runtime](https://openjdk.org/)
 
 ### Installing
 

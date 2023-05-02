@@ -1,6 +1,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build-env
 WORKDIR /App
 
+# Install java runtime to use compile ANTLR
+RUN apt-get update && \
+apt-get install -y --no-install-recommends \
+        openjdk-11-jre \
+    
 # Copy everything
 COPY . ./
 # Restore as distinct layers
