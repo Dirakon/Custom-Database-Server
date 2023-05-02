@@ -1,5 +1,13 @@
+# IDE-specific
 .idea/
+*.DotSettings.user
+
+# Generated binaries
 bin/
 obj/
+
+# Data generated during test runs
 data/
+
+# ANTLR-generated code
 GeneratedLanguage/

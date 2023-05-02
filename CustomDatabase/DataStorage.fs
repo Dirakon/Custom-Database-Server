@@ -6,6 +6,8 @@ open System.IO
 open System.Text.Json
 open CustomDatabase.MiscExtensions
 open CustomDatabase.Value
+open FSharpPlus
+open FSharpPlus.Data
 open FsToolkit.ErrorHandling
 open FsToolkit.ErrorHandling.Operator.Option
 open Microsoft.AspNetCore.Hosting
@@ -84,9 +86,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
         let upperBoundOnPointerIndex =
             match Seq.tryLast previousEntityInstances with
             | None -> 1
-            | Some lastEntity ->
-                EntityInstance.extractIndexFromPointer (entityDefinition, lastEntity.pointer)
-                + 1
+            | Some lastEntity -> EntityInstance.extractIndexFromPointer (entityName, lastEntity.pointer) + 1
 
         let getNthNewPointer index =
             entityName + string (index + upperBoundOnPointerIndex)
@@ -136,8 +136,8 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                 if hasDuplicateValuesOnUniqueColumns (allEntities, entityDefinition) then
                     return! Result.Error "Some 'unique'-constrained column has duplicate elements!"
                 else
-                    let! _ = writeEntityInstances entityName allEntities
-                    return (newEntityInstances |> List.map (fun instance -> instance.pointer))
+                    do! writeEntityInstances entityName allEntities
+                    return (newEntityInstances |> map (fun instance -> instance.pointer))
             })
 
     let unlabelEntityRow
@@ -154,7 +154,8 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                 entityRow
                 |> Seq.tryFind (fun (KeyValue(name, value)) -> name = column.name)
                 |> Option.map (fun (KeyValue(name, value)) -> value)
-                |> Option.toResult $"Could not find a column named '{column.name}' on entity '{entityDefinition.name}'")
+                |> Option.toResultWith
+                    $"Could not find a column named '{column.name}' on entity '{entityDefinition.name}'")
             |> List.sequenceResultM
 
     let unlabelEntityRows entityDefinition entityRows =
@@ -173,7 +174,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
         | [], (unusedIndex :: _) -> Result.Error $"Could not find entity with index '{unusedIndex}'"
         | entities, [] -> Result.Ok entities
         | potentialEntity :: otherPotentialEntities, index :: otherRemovalIndices ->
-            if EntityInstance.extractIndexFromPointer (entityDefinition, potentialEntity.pointer) = index then
+            if EntityInstance.extractIndexFromPointer (entityDefinition.name, potentialEntity.pointer) = index then
                 tryRemoveEntities (entityDefinition, otherPotentialEntities, otherRemovalIndices)
             else
                 tryRemoveEntities (entityDefinition, otherPotentialEntities, removalIndices)
@@ -190,7 +191,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
             Result.Error $"Could not find entity with index '{index}'"
         | entityList, [] -> Result.Ok entityList
         | potentialEntity :: otherPotentialEntities, (index, nextReplacementEntity) :: otherReplacementEntities ->
-            if EntityInstance.extractIndexFromPointer (entityDefinition, potentialEntity.pointer) = index then
+            if EntityInstance.extractIndexFromPointer (entityDefinition.name, potentialEntity.pointer) = index then
                 tryReplaceEntities (entityDefinition, otherPotentialEntities, otherReplacementEntities)
                 |> Result.map (
                     List.append
@@ -201,11 +202,30 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                 tryReplaceEntities (entityDefinition, otherPotentialEntities, sortedReplacementEntities)
                 |> Result.map (List.append [ potentialEntity ])
 
+    let pointersAsSingleEntityIndices (pointers: string NonEmptyList) : Result<string * int list, string> =
+
+        let entityName = EntityInstance.extractEntityNameFromPointer pointers.Head
+
+        if
+            pointers.Tail
+            |> List.exists (fun otherPointer -> EntityInstance.extractEntityNameFromPointer otherPointer <> entityName)
+        then
+            Result.Error "Pointers correspond with different entities, which is not supported yet!"
+        else
+            Result.Ok(
+                entityName,
+                pointers
+                |> NonEmptyList.toList
+                |> List.map (fun pointer -> EntityInstance.extractIndexFromPointer (entityName, pointer))
+            )
+
 
     interface IDataStorage with
         member this.addEntities(entityName, entityRows) =
             result {
-                let! entityDefinition = getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
+                let! entityDefinition =
+                    getEntityByName entityName
+                    |> Option.toResultWith $"'{entityName}' is not defined"
 
                 let! unlabeledEntityRows = unlabelEntityRows entityDefinition entityRows
 
@@ -231,13 +251,16 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                     let newEntities = (entityDescription :: entities)
 
                     result {
-                        let! _ = updateEntityListWith newEntities
+                        do! updateEntityListWith newEntities
                         return! writeEntityInstances entityDescription.name []
                     })
 
         member this.selectEntities(entityName, maybeFilteringFunction) =
             result {
-                let! entityDefinition = getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
+                let! entityDefinition =
+                    getEntityByName entityName
+                    |> Option.toResultWith $"'{entityName}' is not defined"
+
                 let! entityInstances = readEntityInstances entityName
 
                 let entityToLabeledValues =
@@ -262,7 +285,8 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
                 result {
                     let! entityDefinition =
-                        getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
+                        getEntityByName entityName
+                        |> Option.toResultWith $"'{entityName}' is not defined"
 
                     let! entityInstances = readEntityInstances entityName
 
@@ -271,12 +295,13 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
                     return!
                         pointers
-                        |> List.map (fun pointer -> EntityInstance.extractIndexFromPointer (entityDefinition, pointer))
+                        |> List.map (fun pointer ->
+                            EntityInstance.extractIndexFromPointer (entityDefinition.name, pointer))
                         |> List.map (fun index ->
                             entityInstances
                             |> Seq.tryFind (fun instance ->
-                                EntityInstance.extractIndexFromPointer (entityDefinition, instance.pointer) = index)
-                            |> Option.toResult $"Cannot find element by the index {index}")
+                                EntityInstance.extractIndexFromPointer (entityDefinition.name, instance.pointer) = index)
+                            |> Option.toResultWith $"Cannot find element by the index {index}")
                         |> List.sequenceResultM
                         |> Result.map (List.map entityToLabeledValues)
 
@@ -286,23 +311,18 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
             if replacementEntities.Length <> pointers.Length then
                 Result.Error "Pointer and entities count differ!"
             else
-                match pointers with
-                | [] -> Result.Ok()
-                | somePointer :: otherPointers ->
-                    let entityName = EntityInstance.extractEntityNameFromPointer somePointer
-
+                match pointers |> NonEmptyList.tryOfList with
+                | None -> Result.Ok()
+                | Some somePointers ->
                     result {
+                        let! (entityName, pointerIndices) = somePointers |> pointersAsSingleEntityIndices
+
                         let! entityDefinition =
-                            getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
+                            (getEntityByName entityName)
+                            |> Option.toResultWith $"'{entityName}' is not defined"
 
                         let! entityInstances = readEntityInstances entityName
                         let! unlabeledEntityRows = unlabelEntityRows entityDefinition replacementEntities
-
-
-                        let pointerIndices =
-                            pointers
-                            |> List.map (fun pointer ->
-                                EntityInstance.extractIndexFromPointer (entityDefinition, pointer))
 
                         let replacementEntitiesSortedByIndex =
                             unlabeledEntityRows |> List.zip pointerIndices |> List.sortBy fst
@@ -322,26 +342,25 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                 lock entities (fun () ->
                     result {
                         let newEntities = entities |> List.filter (fun entity -> entity.name <> entityName)
-                        let! _ = updateEntityListWith newEntities
+                        do! updateEntityListWith newEntities
                         return! removeEntityInstances entityName
                     })
 
         member this.removeEntities(pointers) =
-            match pointers with
-            | [] -> Result.Ok()
-            | somePointer :: otherPointers ->
-                let entityName = EntityInstance.extractEntityNameFromPointer somePointer
+            match pointers |> NonEmptyList.tryOfList with
+            | None -> Result.Ok()
+            | Some somePointers ->
 
                 result {
+                    let! (entityName, pointerIndices) = somePointers |> pointersAsSingleEntityIndices
+
                     let! entityDefinition =
-                        getEntityByName entityName |> Option.toResult $"'{entityName}' is not defined"
+                        getEntityByName entityName
+                        |> Option.toResultWith $"'{entityName}' is not defined"
 
                     let! entityInstances = readEntityInstances entityName
 
-                    let sortedPointerIndices =
-                        pointers
-                        |> List.map (fun pointer -> EntityInstance.extractIndexFromPointer (entityDefinition, pointer))
-                        |> List.sort
+                    let sortedPointerIndices = pointerIndices |> List.sort
 
                     let! updatedEntities = tryRemoveEntities (entityDefinition, entityInstances, sortedPointerIndices)
                     return! writeEntityInstances entityName updatedEntities

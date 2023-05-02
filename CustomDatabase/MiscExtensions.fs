@@ -21,8 +21,6 @@ module String =
             Char.isDigit lastChar
 
 module Option =
-    let toResult<'ok, 'err> (errorValue: 'err) (option: Option<'ok>) = option.toResult errorValue
-
     let fromNullable nullableObject =
         match nullableObject with
         | null -> None
@@ -30,8 +28,6 @@ module Option =
 
 
 module Result =
-    let flatten (result: Result<Result<'a, 'b>, 'b>) = result |> Result.bind id
-
     let fromThrowingFunction (func: unit -> 'ok) : Result<'ok, string> =
         try
             func () |> Result.Ok

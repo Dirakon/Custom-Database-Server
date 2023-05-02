@@ -49,8 +49,8 @@ module EntityInstance =
         else
             valuesCorrespondWithDefinition (instance.values, definition)
 
-    let extractIndexFromPointer (entityDefinition: Entity, pointer: string) =
-        int (pointer.Substring(entityDefinition.name.Length))
+    let extractIndexFromPointer (entityName: string, pointer: string) =
+        int (pointer.Substring(entityName.Length))
 
     let rec extractEntityNameFromPointer (pointer: string) =
         if pointer |> String.endsWithDigit then
