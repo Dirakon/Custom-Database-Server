@@ -22,7 +22,7 @@ You can create custom entities (SQL tables) with specified types. Apart from pri
 
 ### Executing program
 
-* Run `dotnet run --project CustomDatabase` to execute. Specify the port in `./CustomDatabase/Properties/launchSettings`.
+* Run `dotnet run --project CustomDatabase` to execute. Specify the port in `./CustomDatabase/Properties/launchSetting.json`.
 * Alternatively, build a Docker container using `docker build -t custom-db .`, run with `docker run -p 5005:80 custom-db`. Instead of 5005 you can specify some other port.
 * When the server started working, to execute queries, you can send GET HTTP requests on `{{DATABASE_URL}}/Query?query={{SOME_URI_ENCODED_QUERY}}`
 
