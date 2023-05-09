@@ -7,15 +7,15 @@ open GeneratedLanguage
 
 type IDataStorage =
 
-    abstract getEntityDefinitions: unit -> Entity list
+    abstract GetEntityDefinitions: unit -> Entity list
 
-    abstract createEntity: Entity -> Result<unit, string>
-    abstract addEntities: string * IDictionary<string, Value> list -> Result<string list, string>
-    abstract replaceEntities: string list * IDictionary<string, Value> list -> Result<unit, string>
+    abstract CreateEntity: Entity -> Result<unit, string>
+    abstract AddEntities: string * IDictionary<string, Value> list -> Result<string list, string>
+    abstract ReplaceEntities: string list * IDictionary<string, Value> list -> Result<unit, string>
 
-    abstract selectEntities:
+    abstract SelectEntities:
         string * Option<QueryLanguageParser.BooleanExpressionContext> -> Result<IDictionary<string, Value> list, string>
 
-    abstract retrieveEntities: string list -> Result<IDictionary<string, Value> list, string>
-    abstract removeEntities: string list -> Result<unit, string>
-    abstract dropEntity: string -> Result<unit, string>
+    abstract RetrieveEntities: string list -> Result<IDictionary<string, Value> list, string>
+    abstract RemoveEntities: string list -> Result<unit, string>
+    abstract DropEntity: string -> Result<unit, string>

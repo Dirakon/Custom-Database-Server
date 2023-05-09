@@ -2,9 +2,9 @@ module CustomDatabase.MiscExtensions
 
 open FsToolkit.ErrorHandling
 
-type Option<'ok> with
+type Option<'Ok> with
 
-    member this.toResult<'err>(errorValue: 'err) =
+    member this.ToResult<'Err>(errorValue: 'Err) =
         match this with
         | Some value -> Result.Ok value
         | None -> Result.Error errorValue
@@ -28,17 +28,17 @@ module Option =
 
 
 module Result =
-    let fromThrowingFunction (func: unit -> 'ok) : Result<'ok, string> =
+    let fromThrowingFunction (func: unit -> 'Ok) : Result<'Ok, string> =
         try
             func () |> Result.Ok
         with e ->
             ("Exception Raised: " + e.Message + "\n" + e.Source) |> Result.Error
 
 module List =
-    let filterResultM<'ok, 'err>
-        (filteringFunction: 'ok -> Result<bool, 'err>)
-        (list: 'ok list)
-        : Result<'ok list, 'err> =
+    let filterResultM<'Ok, 'Err>
+        (filteringFunction: 'Ok -> Result<bool, 'Err>)
+        (list: 'Ok list)
+        : Result<'Ok list, 'Err> =
         result {
             let! itemsAndFilteringFunctionResults =
                 list

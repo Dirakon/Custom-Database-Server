@@ -27,22 +27,22 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
     let executeCreationRequest (context: QueryLanguageParser.EntityCreationContext) =
         result {
             let entityNames =
-                dataStorage.getEntityDefinitions () |> List.map (fun entity -> entity.name)
+                dataStorage.GetEntityDefinitions () |> List.map (fun entity -> entity.Name)
 
             let! describedEntity = QueryParser.parseEntity (context, entityNames)
-            return! dataStorage.createEntity describedEntity
+            return! dataStorage.CreateEntity describedEntity
         }
         |> Result.map (fun _ -> "Successful!")
         |> Result.map JsonConverter.serialize
 
     let executeAdditionRequest (context: QueryLanguageParser.EntityAdditionContext) =
         result {
-            let entityName = context.entityName().getValidName ()
+            let entityName = context.entityName().GetValidName ()
 
             return!
-                dataStorage.addEntities (
+                dataStorage.AddEntities (
                     entityName,
-                    JsonConverter.parseMultipleRows (context.jsonArr().getTextSeparatedBySpace ())
+                    JsonConverter.parseMultipleRows (context.jsonArr().GetTextSeparatedBySpace ())
                 )
         }
         |> Result.map JsonConverter.serialize
@@ -54,9 +54,9 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
             let! pointers = QueryParser.parsePointersRecursively (replacementQuery.multipleRawPointers ())
 
             return!
-                dataStorage.replaceEntities (
+                dataStorage.ReplaceEntities (
                     pointers,
-                    JsonConverter.parseMultipleRows (replacementQuery.jsonArr().getTextSeparatedBySpace ())
+                    JsonConverter.parseMultipleRows (replacementQuery.jsonArr().GetTextSeparatedBySpace ())
                 )
         }
         |> Result.map (fun _ -> "Successful!")
@@ -67,7 +67,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
 
             let! pointers = QueryParser.parsePointersRecursively (retrievalQuery.multipleRawPointers ())
 
-            return! dataStorage.retrieveEntities pointers
+            return! dataStorage.RetrieveEntities pointers
         }
         |> Result.map JsonConverter.serialize
 
@@ -76,15 +76,15 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
 
             let filteringFunction = Option.fromNullable (getQuery.booleanExpression ())
 
-            return! dataStorage.selectEntities (getQuery.entityName().getValidName (), filteringFunction)
+            return! dataStorage.SelectEntities (getQuery.entityName().GetValidName (), filteringFunction)
         }
         |> Result.map JsonConverter.serialize
 
     let executeDroppingRequest (context: QueryLanguageParser.EntityDroppingContext) =
         result {
-            let entityName = context.entityName().getValidName ()
+            let entityName = context.entityName().GetValidName ()
 
-            return! dataStorage.dropEntity (entityName)
+            return! dataStorage.DropEntity (entityName)
         }
         |> Result.map (fun _ -> "Successful!")
         |> Result.map JsonConverter.serialize
@@ -93,7 +93,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
         result {
             let! pointers = QueryParser.parsePointersRecursively (context.multipleRawPointers ())
 
-            return! dataStorage.removeEntities (pointers)
+            return! dataStorage.RemoveEntities (pointers)
         }
         |> Result.map (fun _ -> "Successful!")
         |> Result.map JsonConverter.serialize
