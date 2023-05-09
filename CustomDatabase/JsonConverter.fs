@@ -42,7 +42,6 @@ module JsonConverter =
         options.Converters.Add(ValueResolver())
         JsonFSharpOptions.FSharpLuLike().AddToJsonSerializerOptions(options)
 
-
     let serializerOptions =
         let options = JsonSerializerOptions()
         addConvertersTo options

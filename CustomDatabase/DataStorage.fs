@@ -69,10 +69,10 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                 JsonSerializer.Serialize(fileStream, entities, jsonSerializerOptions))
 
     let getEntityByName (entityName: string) : Entity option =
-        entities |> Seq.tryFind (fun entity -> entity.name = entityName)
+        entities |> Seq.tryFind (fun entity -> entity.Name = entityName)
 
     let isEntityDefined (entityDescription: Entity) : bool =
-        (getEntityByName entityDescription.name).IsSome
+        (getEntityByName entityDescription.Name).IsSome
 
 
     let entityRowsToEntityInstances
@@ -81,29 +81,29 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
             entityDefinition: Entity,
             entityRows: Value list list
         ) : EntityInstance list =
-        let entityName = entityDefinition.name
+        let entityName = entityDefinition.Name
 
         let upperBoundOnPointerIndex =
             match Seq.tryLast previousEntityInstances with
             | None -> 1
-            | Some lastEntity -> EntityInstance.extractIndexFromPointer (entityName, lastEntity.pointer) + 1
+            | Some lastEntity -> EntityInstance.extractIndexFromPointer (entityName, lastEntity.Pointer) + 1
 
         let getNthNewPointer index =
             entityName + string (index + upperBoundOnPointerIndex)
 
         entityRows
         |> List.mapi (fun index row ->
-            { pointer = getNthNewPointer index
-              values = row })
+            { Pointer = getNthNewPointer index
+              Values = row })
 
     // Scan entity instances for duplicate values on columns with 'unique' constraint,
     // assuming that entity instances are valid
     // (valid here meaning: 1. same amount of values on each instance, 2. correct types on values)
     let hasDuplicateValuesOnUniqueColumns (entities: EntityInstance list, entityDefinition: Entity) : bool =
         let indicesOfUniqueColumns =
-            entityDefinition.columns
+            entityDefinition.Columns
             |> Seq.mapi (fun index column -> (index, column))
-            |> Seq.filter (fun (index, column) -> column.constraints.unique)
+            |> Seq.filter (fun (index, column) -> column.Constraints.Unique)
             |> Seq.map fst
 
         let allUniqueValuesForEachUniqueColumn =
@@ -111,7 +111,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
             |> Seq.map (fun uniqueColumnIndex ->
                 HashSet(
                     entities
-                    |> Seq.map (fun entity -> entity.values.Item(uniqueColumnIndex).AsIdentifyingString)
+                    |> Seq.map (fun entity -> entity.Values.Item(uniqueColumnIndex).AsIdentifyingString)
                 ))
 
         allUniqueValuesForEachUniqueColumn
@@ -122,7 +122,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
             entityRows: Value list list,
             entityDefinition: Entity
         ) : Result<string list, string> =
-        let entityName = entityDefinition.name
+        let entityName = entityDefinition.Name
 
         lock entityDefinition (fun () ->
             result {
@@ -137,7 +137,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                     return! Result.Error "Some 'unique'-constrained column has duplicate elements!"
                 else
                     do! writeEntityInstances entityName allEntities
-                    return (newEntityInstances |> map (fun instance -> instance.pointer))
+                    return (newEntityInstances |> map (fun instance -> instance.Pointer))
             })
 
     let unlabelEntityRow
@@ -145,17 +145,17 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
             entityRow: IDictionary<string, Value>,
             entityDefinition: Entity
         ) : Result<Value list, string> =
-        if entityRow.Count <> entityDefinition.columns.Length then
+        if entityRow.Count <> entityDefinition.Columns.Length then
             Result.Error
-                $"Number of fields is not correct! Expected {entityDefinition.columns.Length}, received {entityRow.Count}"
+                $"Number of fields is not correct! Expected {entityDefinition.Columns.Length}, received {entityRow.Count}"
         else
-            entityDefinition.columns
+            entityDefinition.Columns
             |> List.map (fun column ->
                 entityRow
-                |> Seq.tryFind (fun (KeyValue(name, value)) -> name = column.name)
+                |> Seq.tryFind (fun (KeyValue(name, value)) -> name = column.Name)
                 |> Option.map (fun (KeyValue(name, value)) -> value)
                 |> Option.toResultWith
-                    $"Could not find a column named '{column.name}' on entity '{entityDefinition.name}'")
+                    $"Could not find a column named '{column.Name}' on entity '{entityDefinition.Name}'")
             |> List.sequenceResultM
 
     let unlabelEntityRows entityDefinition entityRows =
@@ -174,7 +174,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
         | [], (unusedIndex :: _) -> Result.Error $"Could not find entity with index '{unusedIndex}'"
         | entities, [] -> Result.Ok entities
         | potentialEntity :: otherPotentialEntities, index :: otherRemovalIndices ->
-            if EntityInstance.extractIndexFromPointer (entityDefinition.name, potentialEntity.pointer) = index then
+            if EntityInstance.extractIndexFromPointer (entityDefinition.Name, potentialEntity.Pointer) = index then
                 tryRemoveEntities (entityDefinition, otherPotentialEntities, otherRemovalIndices)
             else
                 tryRemoveEntities (entityDefinition, otherPotentialEntities, removalIndices)
@@ -191,12 +191,12 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
             Result.Error $"Could not find entity with index '{index}'"
         | entityList, [] -> Result.Ok entityList
         | potentialEntity :: otherPotentialEntities, (index, nextReplacementEntity) :: otherReplacementEntities ->
-            if EntityInstance.extractIndexFromPointer (entityDefinition.name, potentialEntity.pointer) = index then
+            if EntityInstance.extractIndexFromPointer (entityDefinition.Name, potentialEntity.Pointer) = index then
                 tryReplaceEntities (entityDefinition, otherPotentialEntities, otherReplacementEntities)
                 |> Result.map (
                     List.append
                         [ { potentialEntity with
-                              values = nextReplacementEntity } ]
+                              Values = nextReplacementEntity } ]
                 )
             else
                 tryReplaceEntities (entityDefinition, otherPotentialEntities, sortedReplacementEntities)
@@ -221,7 +221,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
 
     interface IDataStorage with
-        member this.addEntities(entityName, entityRows) =
+        member this.AddEntities(entityName, entityRows) =
             result {
                 let! entityDefinition =
                     getEntityByName entityName
@@ -240,11 +240,11 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                         Result.Error("Some values have incorrect types that don't correspond with entity definition")
             }
 
-        member this.createEntity(entityDescription) =
+        member this.CreateEntity(entityDescription) =
             if isEntityDefined entityDescription then
-                Result.Error $"'{entityDescription.name}' is already defined"
-            elif String.endsWithDigit entityDescription.name then
-                Result.Error $"'{entityDescription.name}' ends with a digit, which is not allowed"
+                Result.Error $"'{entityDescription.Name}' is already defined"
+            elif String.endsWithDigit entityDescription.Name then
+                Result.Error $"'{entityDescription.Name}' ends with a digit, which is not allowed"
             else
 
                 lock entities (fun () ->
@@ -252,10 +252,10 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
                     result {
                         do! updateEntityListWith newEntities
-                        return! writeEntityInstances entityDescription.name []
+                        return! writeEntityInstances entityDescription.Name []
                     })
 
-        member this.selectEntities(entityName, maybeFilteringFunction) =
+        member this.SelectEntities(entityName, maybeFilteringFunction) =
             result {
                 let! entityDefinition =
                     getEntityByName entityName
@@ -277,7 +277,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
             }
 
-        member this.retrieveEntities(pointers) =
+        member this.RetrieveEntities(pointers) =
             match pointers with
             | [] -> Result.Ok([])
             | somePointer :: otherPointers ->
@@ -295,19 +295,20 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
                     return!
                         pointers
-                        |> List.map (fun pointer ->
-                            EntityInstance.extractIndexFromPointer (entityDefinition.name, pointer))
-                        |> List.map (fun index ->
-                            entityInstances
-                            |> Seq.tryFind (fun instance ->
-                                EntityInstance.extractIndexFromPointer (entityDefinition.name, instance.pointer) = index)
-                            |> Option.toResultWith $"Cannot find element by the index {index}")
+                        |> List.map  (
+                            (fun pointer -> EntityInstance.extractIndexFromPointer (entityDefinition.Name, pointer))
+                             >> (fun index ->
+                                entityInstances
+                                |> Seq.tryFind (fun instance ->
+                                    EntityInstance.extractIndexFromPointer (entityDefinition.Name, instance.Pointer) = index)
+                                |> Option.toResultWith $"Cannot find element by the index {index}")
+                        )
                         |> List.sequenceResultM
                         |> Result.map (List.map entityToLabeledValues)
 
                 }
 
-        member this.replaceEntities(pointers, replacementEntities) =
+        member this.ReplaceEntities(pointers, replacementEntities) =
             if replacementEntities.Length <> pointers.Length then
                 Result.Error "Pointer and entities count differ!"
             else
@@ -333,20 +334,20 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                         return! writeEntityInstances entityName updatedEntities
                     }
 
-        member this.getEntityDefinitions() = entities
+        member this.GetEntityDefinitions() = entities
 
-        member this.dropEntity(entityName) =
+        member this.DropEntity(entityName) =
             match (getEntityByName entityName) with
             | None -> Result.Error $"'{entityName}' is not defined"
             | Some entityDefinition ->
                 lock entities (fun () ->
                     result {
-                        let newEntities = entities |> List.filter (fun entity -> entity.name <> entityName)
+                        let newEntities = entities |> List.filter (fun entity -> entity.Name <> entityName)
                         do! updateEntityListWith newEntities
                         return! removeEntityInstances entityName
                     })
 
-        member this.removeEntities(pointers) =
+        member this.RemoveEntities(pointers) =
             match pointers |> NonEmptyList.tryOfList with
             | None -> Result.Ok()
             | Some somePointers ->

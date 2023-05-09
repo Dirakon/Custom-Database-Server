@@ -8,17 +8,17 @@ open FsToolkit.ErrorHandling
 open GeneratedLanguage
 
 module QueryParser =
-    let parseAsContext<'a when 'a :> ParserRuleContext>
+    let parseAsContext<'A when 'A :> ParserRuleContext>
         (
             query: string,
-            contextSelection: QueryLanguageParser -> 'a
-        ) : Result<'a, string> =
+            contextSelection: QueryLanguageParser -> 'A
+        ) : Result<'A, string> =
         let parser = QueryLanguage.QueryLanguage.GetParser(query)
         parser.RemoveErrorListeners()
         parser.AddErrorListener(ThrowingErrorListener<IToken>())
 
         try
-            let parsedType: 'a = contextSelection parser
+            let parsedType: 'A = contextSelection parser
             Result.Ok parsedType
         with error ->
             Result.Error(error.Message)
@@ -28,14 +28,14 @@ module QueryParser =
 
     let rec processAndAggregateRecursiveStructure
         (
-            someStructure: 'structure,
-            singleElementExtractor: 'structure -> 'single,
-            otherElementsExtractor: 'structure -> 'structure,
-            recursionEndFunction: 'structure -> bool,
-            processingFunction: 'single -> Result<'processedSingle, 'err>,
-            aggregationFunction: 'processedSingle -> 'processedMultiple -> Result<'processedMultiple, 'err>,
-            defaultValue: 'processedMultiple
-        ) : Result<'processedMultiple, 'err> =
+            someStructure: 'Structure,
+            singleElementExtractor: 'Structure -> 'Single,
+            otherElementsExtractor: 'Structure -> 'Structure,
+            recursionEndFunction: 'Structure -> bool,
+            processingFunction: 'Single -> Result<'ProcessedSingle, 'Err>,
+            aggregationFunction: 'ProcessedSingle -> 'ProcessedMultiple -> Result<'ProcessedMultiple, 'Err>,
+            defaultValue: 'ProcessedMultiple
+        ) : Result<'ProcessedMultiple, 'Err> =
         if (recursionEndFunction someStructure) then
             Result.Ok defaultValue
         else
@@ -61,7 +61,7 @@ module QueryParser =
         let lowerConstraint = constraintText.ToLower()
 
         match lowerConstraint with
-        | "unique" -> Result.Ok { otherConstraints with unique = true }
+        | "unique" -> Result.Ok { otherConstraints with Unique = true }
         | _ -> Result.Error $"Unknown constraint keyword: {lowerConstraint}"
 
     let parseConstraintsRecursively (constraintsDeclaration: QueryLanguageParser.ConstraintsDeclarationContext) =
@@ -69,7 +69,7 @@ module QueryParser =
             constraintsDeclaration,
             (fun constraints -> constraints.constraintDeclaration ()),
             (fun constraints -> constraints.constraintsDeclaration ()),
-            (fun constraints -> constraints = null || constraints.constraintDeclaration () = null),
+            (fun constraints -> isNull constraints ||isNull (constraints.constraintDeclaration())),
             (fun constraintContext -> Result.Ok(constraintContext.GetText())),
             aggregateConstraints,
             ColumnConstraints.emptyConstraints
@@ -89,9 +89,9 @@ module QueryParser =
             let! ``type`` = parseType (memberDeclaration.``type``().GetText(), entityNames)
 
             return
-                { name = memberDeclaration.memberName().GetText()
-                  ``type`` = ``type``
-                  constraints = constraints }
+                { Name = memberDeclaration.memberName().GetText()
+                  Type = ``type``
+                  Constraints = constraints }
         }
 
 
@@ -104,19 +104,19 @@ module QueryParser =
             membersDeclaration,
             (fun declaration -> declaration.memberDeclaration ()),
             (fun declaration -> declaration.membersDeclaration ()),
-            (fun declaration -> declaration = null || declaration.memberDeclaration () = null),
+            (fun declaration -> isNull declaration || isNull(declaration.memberDeclaration ())),
             parseColumn entityNames,
             (fun singleItem otherItems -> Result.Ok(singleItem :: otherItems)),
             []
         )
 
     let parseEntity (context: QueryLanguageParser.EntityCreationContext, entityNames: string list) =
-        let entityName = context.entityName().getValidName ()
+        let entityName = context.entityName().GetValidName ()
         let entityNamesIncludingSelf = entityName :: entityNames
 
         result {
             let! columns = parseColumnsRecursively (context.membersDeclaration (), entityNamesIncludingSelf)
-            let uniqueColumnNames = HashSet(columns |> Seq.map (fun column -> column.name))
+            let uniqueColumnNames = HashSet(columns |> Seq.map (fun column -> column.Name))
 
             if
                 entityNames
@@ -129,7 +129,7 @@ module QueryParser =
             else if uniqueColumnNames.Contains("pointer") then
                 return! Result.Error "Detected a column named 'pointer', which is not allowed!"
             else
-                return { name = entityName; columns = columns }
+                return { Name = entityName; Columns = columns }
         }
 
 
@@ -138,7 +138,7 @@ module QueryParser =
             pointers,
             (fun pointers -> pointers.rawPointer ()),
             (fun pointers -> pointers.multipleRawPointers ()),
-            (fun pointers -> pointers = null || pointers.rawPointer () = null),
+            (fun pointers -> isNull pointers  || isNull(pointers.rawPointer ())),
             (fun pointer -> Result.Ok <| pointer.GetText()),
             (fun singleItem otherItems -> Result.Ok(singleItem :: otherItems)),
             []
