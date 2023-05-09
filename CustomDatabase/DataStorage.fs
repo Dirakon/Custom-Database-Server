@@ -295,9 +295,9 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
                     return!
                         pointers
-                        |> List.map  (
+                        |> List.map (
                             (fun pointer -> EntityInstance.extractIndexFromPointer (entityDefinition.Name, pointer))
-                             >> (fun index ->
+                            >> (fun index ->
                                 entityInstances
                                 |> Seq.tryFind (fun instance ->
                                     EntityInstance.extractIndexFromPointer (entityDefinition.Name, instance.Pointer) = index)

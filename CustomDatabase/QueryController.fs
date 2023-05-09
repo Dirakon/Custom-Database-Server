@@ -1,11 +1,9 @@
 namespace CustomDatabase.Controllers
 
 
-open System.Collections.Generic
 open System.ComponentModel.DataAnnotations
 open CustomDatabase
 open CustomDatabase.MiscExtensions
-open CustomDatabase.Value
 open CustomDatabase.Expressions
 open GeneratedLanguage
 open Microsoft.AspNetCore.Mvc
@@ -13,10 +11,6 @@ open Microsoft.Extensions.Logging
 open CustomDatabase.Antlr
 open FsToolkit.ErrorHandling
 open FsToolkit.ErrorHandling.Operator.Result
-
-
-
-type Row = Dictionary<string, Value>
 
 [<ApiController>]
 [<Route("[controller]")>]
@@ -27,7 +21,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
     let executeCreationRequest (context: QueryLanguageParser.EntityCreationContext) =
         result {
             let entityNames =
-                dataStorage.GetEntityDefinitions () |> List.map (fun entity -> entity.Name)
+                dataStorage.GetEntityDefinitions() |> List.map (fun entity -> entity.Name)
 
             let! describedEntity = QueryParser.parseEntity (context, entityNames)
             return! dataStorage.CreateEntity describedEntity
@@ -37,12 +31,12 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
 
     let executeAdditionRequest (context: QueryLanguageParser.EntityAdditionContext) =
         result {
-            let entityName = context.entityName().GetValidName ()
+            let entityName = context.entityName().GetValidName()
 
             return!
-                dataStorage.AddEntities (
+                dataStorage.AddEntities(
                     entityName,
-                    JsonConverter.parseMultipleRows (context.jsonArr().GetTextSeparatedBySpace ())
+                    JsonConverter.parseMultipleRows (context.jsonArr().GetTextSeparatedBySpace())
                 )
         }
         |> Result.map JsonConverter.serialize
@@ -54,9 +48,9 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
             let! pointers = QueryParser.parsePointersRecursively (replacementQuery.multipleRawPointers ())
 
             return!
-                dataStorage.ReplaceEntities (
+                dataStorage.ReplaceEntities(
                     pointers,
-                    JsonConverter.parseMultipleRows (replacementQuery.jsonArr().GetTextSeparatedBySpace ())
+                    JsonConverter.parseMultipleRows (replacementQuery.jsonArr().GetTextSeparatedBySpace())
                 )
         }
         |> Result.map (fun _ -> "Successful!")
@@ -76,15 +70,15 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
 
             let filteringFunction = Option.fromNullable (getQuery.booleanExpression ())
 
-            return! dataStorage.SelectEntities (getQuery.entityName().GetValidName (), filteringFunction)
+            return! dataStorage.SelectEntities(getQuery.entityName().GetValidName(), filteringFunction)
         }
         |> Result.map JsonConverter.serialize
 
     let executeDroppingRequest (context: QueryLanguageParser.EntityDroppingContext) =
         result {
-            let entityName = context.entityName().GetValidName ()
+            let entityName = context.entityName().GetValidName()
 
-            return! dataStorage.DropEntity (entityName)
+            return! dataStorage.DropEntity(entityName)
         }
         |> Result.map (fun _ -> "Successful!")
         |> Result.map JsonConverter.serialize
@@ -93,7 +87,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
         result {
             let! pointers = QueryParser.parsePointersRecursively (context.multipleRawPointers ())
 
-            return! dataStorage.RemoveEntities (pointers)
+            return! dataStorage.RemoveEntities(pointers)
         }
         |> Result.map (fun _ -> "Successful!")
         |> Result.map JsonConverter.serialize

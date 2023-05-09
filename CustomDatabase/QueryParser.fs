@@ -69,7 +69,7 @@ module QueryParser =
             constraintsDeclaration,
             (fun constraints -> constraints.constraintDeclaration ()),
             (fun constraints -> constraints.constraintsDeclaration ()),
-            (fun constraints -> isNull constraints ||isNull (constraints.constraintDeclaration())),
+            (fun constraints -> isNull constraints || isNull (constraints.constraintDeclaration ())),
             (fun constraintContext -> Result.Ok(constraintContext.GetText())),
             aggregateConstraints,
             ColumnConstraints.emptyConstraints
@@ -104,14 +104,14 @@ module QueryParser =
             membersDeclaration,
             (fun declaration -> declaration.memberDeclaration ()),
             (fun declaration -> declaration.membersDeclaration ()),
-            (fun declaration -> isNull declaration || isNull(declaration.memberDeclaration ())),
+            (fun declaration -> isNull declaration || isNull (declaration.memberDeclaration ())),
             parseColumn entityNames,
             (fun singleItem otherItems -> Result.Ok(singleItem :: otherItems)),
             []
         )
 
     let parseEntity (context: QueryLanguageParser.EntityCreationContext, entityNames: string list) =
-        let entityName = context.entityName().GetValidName ()
+        let entityName = context.entityName().GetValidName()
         let entityNamesIncludingSelf = entityName :: entityNames
 
         result {
@@ -138,7 +138,7 @@ module QueryParser =
             pointers,
             (fun pointers -> pointers.rawPointer ()),
             (fun pointers -> pointers.multipleRawPointers ()),
-            (fun pointers -> isNull pointers  || isNull(pointers.rawPointer ())),
+            (fun pointers -> isNull pointers || isNull (pointers.rawPointer ())),
             (fun pointer -> Result.Ok <| pointer.GetText()),
             (fun singleItem otherItems -> Result.Ok(singleItem :: otherItems)),
             []
