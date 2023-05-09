@@ -5,16 +5,16 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
-    
+
     <ItemGroup>
         <Antlr4 Include="QueryLanguage.g4">
             <Package>GeneratedLanguage</Package>
         </Antlr4>
     </ItemGroup>
-    
-    <ItemGroup>     
-        <PackageReference Include="Antlr4.Runtime.Standard" Version="4.12.0" />
-        <PackageReference Include="Antlr4BuildTasks" Version="12.2.0" PrivateAssets="all" />
+
+    <ItemGroup>
+        <PackageReference Include="Antlr4.Runtime.Standard" Version="4.12.0"/>
+        <PackageReference Include="Antlr4BuildTasks" Version="12.2.0" PrivateAssets="all"/>
     </ItemGroup>
 
 </Project>

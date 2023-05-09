@@ -55,7 +55,7 @@ module Expressions =
         | Int int1, Int int2 when notNull (operator.lte ()) -> Result.Ok(int1 <= int2)
         | _ ->
             Result.Error(
-                $"Cannot apply operator '{operator.GetTextSeparatedBySpace ()}' to types {value1.TypeName} and {value2.TypeName}"
+                $"Cannot apply operator '{operator.GetTextSeparatedBySpace()}' to types {value1.TypeName} and {value2.TypeName}"
             )
 
     let tryExtractValueFromAtom (atom: QueryLanguageParser.ArithmeticAtomContext) variables =
@@ -83,11 +83,11 @@ module Expressions =
             let atom = expression.arithmeticAtom ()
             tryExtractValueFromAtom atom variables
         else if
-            isNull(expression.arithmeticExpression())
+            isNull (expression.arithmeticExpression ())
             || (expression.arithmeticExpression().Length = 0)
         then
             Result.Error
-                $"Cannot evaluate expression '{expression.GetTextSeparatedBySpace ()}': not an arithmetic unit, and not a combination of arithmetic expressions"
+                $"Cannot evaluate expression '{expression.GetTextSeparatedBySpace()}': not an arithmetic unit, and not a combination of arithmetic expressions"
         else if expression.arithmeticExpression().Length = 2 then
             result {
                 let! expr1 = tryEvaluateArithmetic (expression.arithmeticExpression().[0], variables)
@@ -104,7 +104,7 @@ module Expressions =
                     | String str1, String str2 when notNull (expression.plus ()) -> Result.Ok(String(str1 + str2))
                     | _ ->
                         Result.Error
-                            $"Cannot evaluate expression '{expression.GetTextSeparatedBySpace ()}': operation not permitted for types {expr1.TypeName} and {expr2.TypeName}"
+                            $"Cannot evaluate expression '{expression.GetTextSeparatedBySpace()}': operation not permitted for types {expr1.TypeName} and {expr2.TypeName}"
             }
         else if expression.arithmeticExpression().Length = 1 then
             result {
@@ -121,7 +121,7 @@ module Expressions =
                     | value -> Result.Ok value
             }
         else
-            Result.Error $"Cannot evaluate expression '{expression.GetTextSeparatedBySpace ()}'"
+            Result.Error $"Cannot evaluate expression '{expression.GetTextSeparatedBySpace()}'"
 
     let compareBoolean (value1: bool, operator: QueryLanguageParser.BooleanBinaryContext, value2: bool) =
         if notNull (operator.OR()) then
@@ -178,4 +178,4 @@ module Expressions =
                 return! compareArithmetic (expr1, expression.arithmeticComparator (), expr2)
             }
         else
-            Result.Error($"Cannot handle binary expression: '{expression.GetTextSeparatedBySpace ()}'")
+            Result.Error($"Cannot handle binary expression: '{expression.GetTextSeparatedBySpace()}'")
