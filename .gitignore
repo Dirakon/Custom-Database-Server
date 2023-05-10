@@ -11,3 +11,4 @@ data/
 
 # ANTLR-generated code
 GeneratedLanguage/
+.antlr

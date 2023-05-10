@@ -26,6 +26,8 @@ module QueryParser =
     let parseAsSomeQuery query =
         parseAsContext (query, (fun parser -> parser.someQuery ()))
 
+    /// An abstract and customizable way to parse any recursive structure
+    /// with an ability of early stopping via Result monad
     let rec processAndAggregateRecursiveStructure
         (
             someStructure: 'Structure,

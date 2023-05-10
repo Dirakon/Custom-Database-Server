@@ -74,6 +74,7 @@ module Expressions =
         else
             Result.Error $"Cannot identify arithmetic atom: '{atom.GetText()}'"
 
+    /// Attempts to evaluate ArithmeticExpressionContext (as specified in the Custom Query Language)
     let rec tryEvaluateArithmetic
         (
             expression: QueryLanguageParser.ArithmeticExpressionContext,
@@ -135,6 +136,7 @@ module Expressions =
         else
             Result.Error($"Undefined binary boolean operator: '{operator.GetText()}'")
 
+    /// Attempts to evaluate BooleanExpressionContext (as specified in the Custom Query Language)
     let rec tryEvaluateBoolean
         (
             expression: QueryLanguageParser.BooleanExpressionContext,

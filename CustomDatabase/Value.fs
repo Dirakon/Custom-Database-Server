@@ -4,7 +4,7 @@ namespace CustomDatabase.Value
 open Microsoft.FSharp.Reflection
 
 
-//[<JsonConverter(typeof<ValueResolver>)>]
+/// A value which can represent the following things: int, string, bool, list of values, a pointer (which is also string)
 type Value =
     | Int of int
     | String of string

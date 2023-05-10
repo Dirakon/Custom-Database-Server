@@ -93,6 +93,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
         |> Result.map JsonConverter.serialize
 
 
+    /// The main endpoint which parses the query and chooses the appropriate method to process it
     [<HttpGet>]
     member this.ExecuteQuery([<Required>] query: string) =
         result {
