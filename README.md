@@ -8,12 +8,24 @@ The query examples for the language are in the section at the bottom of this pag
 
 You can create custom entities (SQL tables) with specified types. Apart from primitives, arrays and pointers are also supported types. A pointer is the unique identifier of an object. Every object has a "pointer" column by default, which serves as a primary key. You can use pointers to other types as foreign keys. Pointers can also be used for direct interaction with the database (specifically, for `RETRIEVE`/`REMOVE`/`REPLACE` queries).
 
+Simplified visualization of the custom query language can be found [here](https://dirakon.github.io/Custom-Database-Server/).
+
 ## Getting Started
 
-### Dependencies
+### Prerequisites
 
 * [dotnet7](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
 * [java runtime](https://openjdk.org/)
+
+### Dependencies
+
+* [ASP.net](https://ASP.net)
+* [ANTLR4](https://github.com/antlr/antlr4)
+* [Antlr4BuildTasks](https://github.com/kaby76/Antlr4BuildTasks)
+* [FSharpPlus](https://github.com/fsprojects/FSharpPlus)
+* [FsToolkit.ErrorHandling](https://github.com/demystifyfp/FsToolkit.ErrorHandling)
+* [FSharp.SystemTextJson](https://github.com/Tarmil/FSharp.SystemTextJson)
+* [Swashbuckle.AspNetCore](https://github.com/domaindrivendev/Swashbuckle.AspNetCore)
 
 ### Installing
 
