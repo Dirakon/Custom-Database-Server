@@ -1,9 +1,9 @@
-name: Fsharp linting
+name: Runing tests
 
 on: [push, pull_request]
 
 jobs:
-  lint:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -22,7 +22,5 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build --configuration Release --no-restore
-      - name: Install fsharp linting utility
-        run: dotnet tool install -g dotnet-fsharplint
-      - name: Lint
-        run: dotnet-fsharplint lint CustomDatabase.sln
+      - name: Run tests
+        run: dotnet test
