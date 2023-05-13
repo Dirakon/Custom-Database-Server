@@ -7,31 +7,31 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="MiscExtensions.fs" />
-        <Compile Include="Antlr.fs" />
-        <Compile Include="Value.fs" />
-        <Compile Include="JsonConverter.fs" />
-        <Compile Include="Expressions.fs" />
-        <Compile Include="Entity.fs" />
-        <Compile Include="Pointer.fs" />
-        <Compile Include="EntityInstance.fs" />
-        <Compile Include="IDataStorage.fs" />
-        <Compile Include="DataStorage.fs" />
-        <Compile Include="QueryParser.fs" />
-        <Compile Include="QueryController.fs" />
-        <Compile Include="Program.fs" />
+        <Compile Include="MiscExtensions.fs"/>
+        <Compile Include="Antlr.fs"/>
+        <Compile Include="Value.fs"/>
+        <Compile Include="JsonConverter.fs"/>
+        <Compile Include="Expressions.fs"/>
+        <Compile Include="Entity.fs"/>
+        <Compile Include="Pointer.fs"/>
+        <Compile Include="EntityInstance.fs"/>
+        <Compile Include="IDataStorage.fs"/>
+        <Compile Include="DataStorage.fs"/>
+        <Compile Include="QueryParser.fs"/>
+        <Compile Include="QueryController.fs"/>
+        <Compile Include="Program.fs"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="FSharp.SystemTextJson" Version="1.1.23" />
-        <PackageReference Include="FSharpPlus" Version="1.4.1" />
-        <PackageReference Include="FsToolkit.ErrorHandling" Version="4.6.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-        <PackageReference Update="FSharp.Core" Version="7.0.300-beta.23176.1" />
+        <PackageReference Include="FSharp.SystemTextJson" Version="1.1.23"/>
+        <PackageReference Include="FSharpPlus" Version="1.4.1"/>
+        <PackageReference Include="FsToolkit.ErrorHandling" Version="4.6.0"/>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0"/>
+        <PackageReference Update="FSharp.Core" Version="7.0.300-beta.23176.1"/>
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\QueryLanguage\QueryLanguage.csproj" />
+        <ProjectReference Include="..\QueryLanguage\QueryLanguage.csproj"/>
     </ItemGroup>
 
 

@@ -74,6 +74,65 @@ module EntityInstance =
               Values = row })
 
 
+    // Scan entity instances for duplicate values on columns with 'unique' constraint,
+    // assuming that entity instances are valid
+    // (valid here meaning: 1. same amount of values on each instance, 2. correct types on values)
+    let hasDuplicateValuesOnUniqueColumnsUnchecked (entities: EntityInstance list, entityDefinition: Entity) : bool =
+        let indicesOfUniqueColumns =
+            entityDefinition.Columns
+            |> Seq.mapi (fun index column -> (index, column))
+            |> Seq.filter (fun (index, column) -> column.Constraints.Unique)
+            |> Seq.map fst
+
+        let allUniqueValuesForEachUniqueColumn =
+            indicesOfUniqueColumns
+            |> Seq.map (fun uniqueColumnIndex ->
+                HashSet(
+                    entities
+                    |> Seq.map (fun entity -> entity.Values.Item(uniqueColumnIndex).AsIdentifyingString)
+                ))
+
+        allUniqueValuesForEachUniqueColumn
+        |> Seq.exists (fun uniqueValuesForAColumn -> uniqueValuesForAColumn.Count <> entities.Length)
+
+    let rec tryRemoveEntities
+        (
+            entityDefinition: Entity,
+            entityList: EntityInstance list,
+            removalIndices: int list
+        ) : Result<EntityInstance list, string> =
+        match entityList, removalIndices with
+        | [], (unusedIndex :: _) -> Result.Error $"Could not find entity with index '{unusedIndex}'"
+        | entities, [] -> Result.Ok entities
+        | potentialEntity :: otherPotentialEntities, index :: otherRemovalIndices ->
+            if Pointer.toIndexKnowingEntityName entityDefinition.Name potentialEntity.Pointer = index then
+                tryRemoveEntities (entityDefinition, otherPotentialEntities, otherRemovalIndices)
+            else
+                tryRemoveEntities (entityDefinition, otherPotentialEntities, removalIndices)
+                |> Result.map (List.append [ potentialEntity ])
+
+    let rec tryReplaceEntities
+        (
+            entityDefinition: Entity,
+            entityList: EntityInstance list,
+            sortedReplacementEntities: (int * Value list) list
+        ) : Result<EntityInstance list, string> =
+        match entityList, sortedReplacementEntities with
+        | [], (index, nextReplacementEntity) :: otherReplacementEntities ->
+            Result.Error $"Could not find entity with index '{index}'"
+        | entityList, [] -> Result.Ok entityList
+        | potentialEntity :: otherPotentialEntities, (index, nextReplacementEntity) :: otherReplacementEntities ->
+            if Pointer.toIndexKnowingEntityName entityDefinition.Name potentialEntity.Pointer = index then
+                tryReplaceEntities (entityDefinition, otherPotentialEntities, otherReplacementEntities)
+                |> Result.map (
+                    List.append
+                        [ { potentialEntity with
+                              Values = nextReplacementEntity } ]
+                )
+            else
+                tryReplaceEntities (entityDefinition, otherPotentialEntities, sortedReplacementEntities)
+                |> Result.map (List.append [ potentialEntity ])
+
 module LabeledEntityRow =
 
     let unlabelSingleKnowingDefinition

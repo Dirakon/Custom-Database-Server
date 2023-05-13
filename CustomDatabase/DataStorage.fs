@@ -1,7 +1,6 @@
 namespace CustomDatabase
 
 
-open System.Collections.Generic
 open System.IO
 open System.Text.Json
 open CustomDatabase.MiscExtensions
@@ -28,6 +27,19 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
     let mutable entities: Entity list = []
 
     let jsonSerializerOptions = JsonConverter.serializerOptions
+
+
+    do
+        lock entities (fun () ->
+            if File.Exists(globalEntityInfoFilePath) then
+                use fileStream = File.OpenRead(globalEntityInfoFilePath)
+                entities <- JsonSerializer.Deserialize(fileStream, jsonSerializerOptions)
+            else
+                logger.LogInformation "No entity information file found! First initialization..."
+                Directory.CreateDirectory(dataFolderPath) |> ignore
+                use fileStream = File.OpenWrite(globalEntityInfoFilePath)
+                JsonSerializer.Serialize(fileStream, entities, jsonSerializerOptions))
+
 
     let readEntityInstances entityName =
         Result.fromThrowingFunction (fun () ->
@@ -57,44 +69,12 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
             JsonSerializer.Serialize(globalFileStream, newEntities, jsonSerializerOptions)
             entities <- newEntities)
 
-    do
-        lock entities (fun () ->
-            if File.Exists(globalEntityInfoFilePath) then
-                use fileStream = File.OpenRead(globalEntityInfoFilePath)
-                entities <- JsonSerializer.Deserialize(fileStream, jsonSerializerOptions)
-            else
-                logger.LogInformation "No entity information file found! First initialization..."
-                Directory.CreateDirectory(dataFolderPath) |> ignore
-                use fileStream = File.OpenWrite(globalEntityInfoFilePath)
-                JsonSerializer.Serialize(fileStream, entities, jsonSerializerOptions))
-
     let getEntityByName (entityName: string) : Entity option =
         entities |> Seq.tryFind (fun entity -> entity.Name = entityName)
 
     let isEntityDefined (entityDescription: Entity) : bool =
         (getEntityByName entityDescription.Name).IsSome
 
-
-    // Scan entity instances for duplicate values on columns with 'unique' constraint,
-    // assuming that entity instances are valid
-    // (valid here meaning: 1. same amount of values on each instance, 2. correct types on values)
-    let hasDuplicateValuesOnUniqueColumns (entities: EntityInstance list, entityDefinition: Entity) : bool =
-        let indicesOfUniqueColumns =
-            entityDefinition.Columns
-            |> Seq.mapi (fun index column -> (index, column))
-            |> Seq.filter (fun (index, column) -> column.Constraints.Unique)
-            |> Seq.map fst
-
-        let allUniqueValuesForEachUniqueColumn =
-            indicesOfUniqueColumns
-            |> Seq.map (fun uniqueColumnIndex ->
-                HashSet(
-                    entities
-                    |> Seq.map (fun entity -> entity.Values.Item(uniqueColumnIndex).AsIdentifyingString)
-                ))
-
-        allUniqueValuesForEachUniqueColumn
-        |> Seq.exists (fun uniqueValuesForAColumn -> uniqueValuesForAColumn.Count <> entities.Length)
 
     let tryAppendEntityRowsToFileUnchecked
         (
@@ -112,52 +92,12 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
                 let allEntities = newEntityInstances |> List.append previousEntityInstances
 
-                if hasDuplicateValuesOnUniqueColumns (allEntities, entityDefinition) then
+                if EntityInstance.hasDuplicateValuesOnUniqueColumnsUnchecked (allEntities, entityDefinition) then
                     return! Result.Error "Some 'unique'-constrained column has duplicate elements!"
                 else
                     do! writeEntityInstances entityName allEntities
                     return (newEntityInstances |> map (fun instance -> instance.Pointer))
             })
-
-
-
-    let rec tryRemoveEntities
-        (
-            entityDefinition: Entity,
-            entityList: EntityInstance list,
-            removalIndices: int list
-        ) : Result<EntityInstance list, string> =
-        match entityList, removalIndices with
-        | [], (unusedIndex :: _) -> Result.Error $"Could not find entity with index '{unusedIndex}'"
-        | entities, [] -> Result.Ok entities
-        | potentialEntity :: otherPotentialEntities, index :: otherRemovalIndices ->
-            if Pointer.toIndexKnowingEntityName entityDefinition.Name potentialEntity.Pointer = index then
-                tryRemoveEntities (entityDefinition, otherPotentialEntities, otherRemovalIndices)
-            else
-                tryRemoveEntities (entityDefinition, otherPotentialEntities, removalIndices)
-                |> Result.map (List.append [ potentialEntity ])
-
-    let rec tryReplaceEntities
-        (
-            entityDefinition: Entity,
-            entityList: EntityInstance list,
-            sortedReplacementEntities: (int * Value list) list
-        ) : Result<EntityInstance list, string> =
-        match entityList, sortedReplacementEntities with
-        | [], (index, nextReplacementEntity) :: otherReplacementEntities ->
-            Result.Error $"Could not find entity with index '{index}'"
-        | entityList, [] -> Result.Ok entityList
-        | potentialEntity :: otherPotentialEntities, (index, nextReplacementEntity) :: otherReplacementEntities ->
-            if Pointer.toIndexKnowingEntityName entityDefinition.Name potentialEntity.Pointer = index then
-                tryReplaceEntities (entityDefinition, otherPotentialEntities, otherReplacementEntities)
-                |> Result.map (
-                    List.append
-                        [ { potentialEntity with
-                              Values = nextReplacementEntity } ]
-                )
-            else
-                tryReplaceEntities (entityDefinition, otherPotentialEntities, sortedReplacementEntities)
-                |> Result.map (List.append [ potentialEntity ])
 
 
     interface IDataStorage with
@@ -249,7 +189,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
         member this.ReplaceEntities(pointers, replacementEntities) =
             if replacementEntities.Length <> pointers.Length then
-                Result.Error "Pointer and entities count differ!"
+                Result.Error "Pointer and entity count differ!"
             else
                 match pointers |> NonEmptyList.tryOfList with
                 | None -> Result.Ok()
@@ -271,9 +211,21 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                             unlabeledEntityRows |> List.zip pointerIndices |> List.sortBy fst
 
                         let! updatedEntities =
-                            tryReplaceEntities (entityDefinition, entityInstances, replacementEntitiesSortedByIndex)
+                            EntityInstance.tryReplaceEntities (
+                                entityDefinition,
+                                entityInstances,
+                                replacementEntitiesSortedByIndex
+                            )
 
-                        return! writeEntityInstances entityName updatedEntities
+                        if
+                            EntityInstance.hasDuplicateValuesOnUniqueColumnsUnchecked (
+                                updatedEntities,
+                                entityDefinition
+                            )
+                        then
+                            return! Result.Error "Some 'unique'-constrained column has duplicate elements!"
+                        else
+                            return! writeEntityInstances entityName updatedEntities
                     }
 
         member this.GetEntityDefinitions() = entities
@@ -290,7 +242,7 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
                     })
 
         member this.RemoveEntities(pointers) =
-            match pointers |> NonEmptyList.tryOfList with
+            match NonEmptyList.tryOfList pointers with
             | None -> Result.Ok()
             | Some somePointers ->
 
@@ -305,6 +257,8 @@ type DataStorage(webHostEnvironment: IWebHostEnvironment, logger: ILogger<DataSt
 
                     let sortedPointerIndices = pointerIndices |> List.sort
 
-                    let! updatedEntities = tryRemoveEntities (entityDefinition, entityInstances, sortedPointerIndices)
+                    let! updatedEntities =
+                        EntityInstance.tryRemoveEntities (entityDefinition, entityInstances, sortedPointerIndices)
+
                     return! writeEntityInstances entityName updatedEntities
                 }
