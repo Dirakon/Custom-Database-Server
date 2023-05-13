@@ -26,6 +26,8 @@ Simplified visualization of the custom query language can be found [here](https:
 * [FsToolkit.ErrorHandling](https://github.com/demystifyfp/FsToolkit.ErrorHandling)
 * [FSharp.SystemTextJson](https://github.com/Tarmil/FSharp.SystemTextJson)
 * [Swashbuckle.AspNetCore](https://github.com/domaindrivendev/Swashbuckle.AspNetCore)
+* [NUnit](https://nunit.org/)
+* [Unquote](https://github.com/SwensenSoftware/unquote)
 
 ### Installing
 
