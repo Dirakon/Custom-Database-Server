@@ -30,12 +30,12 @@ let ``basic equality`` () =
 [<Test>]
 let ``basic inequality`` () =
     let evaluatedExpression = parseAndEvaluateBooleanUnsafe "1 != 1" noVariables
-    test <@ evaluatedExpression @>
+    test <@ not evaluatedExpression @>
 
 [<Test>]
 let ``basic gt`` () =
     let evaluatedExpression = parseAndEvaluateBooleanUnsafe "1 > 2" noVariables
-    test <@ evaluatedExpression @>
+    test <@ not evaluatedExpression @>
 
 [<Test>]
 let ``basic lt`` () =
