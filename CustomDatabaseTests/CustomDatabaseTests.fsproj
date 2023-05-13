@@ -8,8 +8,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="BooleanExpressionTests.fs"/>
-        <Compile Include="ArithmeticExpressionTests.fs"/>
+        <Compile Include="DataStorageTests\DataStorage.fs"/>
+        <Compile Include="DataStorageTests\DataStorageEntityAdditionTests.fs"/>
+        <Compile Include="DataStorageTests\DataStorageGetEntityDefinitionTests.fs"/>
+        <Compile Include="DataStorageTests\DataStorageCreateEntityTests.fs"/>
+        <Compile Include="ExpressionTests\ArithmeticExpressionTests.fs"/>
+        <Compile Include="ExpressionTests\BooleanExpressionTests.fs"/>
         <Compile Include="Program.fs"/>
     </ItemGroup>
 
