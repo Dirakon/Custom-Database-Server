@@ -19,6 +19,7 @@
         <Compile Include="DataStorage.fs"/>
         <Compile Include="QueryParser.fs"/>
         <Compile Include="QueryController.fs"/>
+        <Compile Include="HealthCheckController.fs"/>
         <Compile Include="Program.fs"/>
     </ItemGroup>
 
