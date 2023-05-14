@@ -1,4 +1,4 @@
-module CustomDatabaseTests.DataStorageTests.DataStorageCreateEntityTests
+module CustomDatabaseTests.DataStorageTests.CreateEntityTests
 
 
 
@@ -8,7 +8,7 @@ open Swensen.Unquote
 
 
 [<TestFixture>]
-type DataStorageCreateEntityTests() =
+type CreateEntityTests() =
     inherit DataStorageTestSuite()
 
     [<Test>]

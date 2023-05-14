@@ -55,3 +55,6 @@ module JsonConverter =
 
     let inline serialize something =
         JsonSerializer.SerializeToElement(something, serializerOptions)
+
+    let inline deserialize (something: JsonElement) =
+        JsonSerializer.Deserialize(something, serializerOptions)

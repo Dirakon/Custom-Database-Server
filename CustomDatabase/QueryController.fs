@@ -5,6 +5,8 @@ open System.ComponentModel.DataAnnotations
 open CustomDatabase
 open CustomDatabase.MiscExtensions
 open CustomDatabase.Expressions
+open FSharpPlus
+open FSharpPlus.Data
 open GeneratedLanguage
 open Microsoft.AspNetCore.Mvc
 open Microsoft.Extensions.Logging
@@ -17,6 +19,7 @@ open FsToolkit.ErrorHandling.Operator.Result
 type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage) =
     inherit ControllerBase()
 
+    let successfulUnitOperationDescription = "Successful!"
 
     let executeCreationRequest (context: QueryLanguageParser.EntityCreationContext) =
         result {
@@ -26,7 +29,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
             let! describedEntity = QueryParser.parseEntity (context, entityNames)
             return! dataStorage.CreateEntity describedEntity
         }
-        |> Result.map (fun _ -> "Successful!")
+        |> Result.map (fun _ -> successfulUnitOperationDescription)
         |> Result.map JsonConverter.serialize
 
     let executeAdditionRequest (context: QueryLanguageParser.EntityAdditionContext) =
@@ -53,7 +56,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
                     JsonConverter.parseMultipleRows (replacementQuery.jsonArr().GetTextSeparatedBySpace())
                 )
         }
-        |> Result.map (fun _ -> "Successful!")
+        |> Result.map (fun _ -> successfulUnitOperationDescription)
         |> Result.map JsonConverter.serialize
 
     let executeRetrievalRequest (retrievalQuery: QueryLanguageParser.EntityRetrievalContext) =
@@ -80,7 +83,7 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
 
             return! dataStorage.DropEntity(entityName)
         }
-        |> Result.map (fun _ -> "Successful!")
+        |> Result.map (fun _ -> successfulUnitOperationDescription)
         |> Result.map JsonConverter.serialize
 
     let executeRemovalRequest (context: QueryLanguageParser.EntityRemovalContext) =
@@ -89,32 +92,43 @@ type QueryController(logger: ILogger<QueryController>, dataStorage: IDataStorage
 
             return! dataStorage.RemoveEntities(pointers)
         }
-        |> Result.map (fun _ -> "Successful!")
+        |> Result.map (fun _ -> successfulUnitOperationDescription)
         |> Result.map JsonConverter.serialize
 
 
     /// The main endpoint which parses the query and chooses the appropriate method to process it
     [<HttpGet>]
     member this.ExecuteQuery([<Required>] query: string) =
-        result {
-            let! parsedQuery = QueryParser.parseAsSomeQuery query
+        logger.LogInformation($"Got query: '{query}'")
 
-            return!
-                if notNull (parsedQuery.entityAddition ()) then
-                    executeAdditionRequest (parsedQuery.entityAddition ())
-                elif notNull (parsedQuery.entityCreation ()) then
-                    executeCreationRequest (parsedQuery.entityCreation ())
-                elif notNull (parsedQuery.entitySelection ()) then
-                    executeSelectionRequest (parsedQuery.entitySelection ())
-                elif notNull (parsedQuery.entityReplacement ()) then
-                    executeReplacementRequest (parsedQuery.entityReplacement ())
-                elif notNull (parsedQuery.entityRetrieval ()) then
-                    executeRetrievalRequest (parsedQuery.entityRetrieval ())
-                elif notNull (parsedQuery.entityRemoval ()) then
-                    executeRemovalRequest (parsedQuery.entityRemoval ())
-                elif notNull (parsedQuery.entityDropping ()) then
-                    executeDroppingRequest (parsedQuery.entityDropping ())
-                else
-                    Result.Error("Cannot identify the query type!")
+        let response =
+            result {
+                let! parsedQuery = QueryParser.parseAsSomeQuery query
 
-        }
+                return!
+                    if notNull (parsedQuery.entityAddition ()) then
+                        executeAdditionRequest (parsedQuery.entityAddition ())
+                    elif notNull (parsedQuery.entityCreation ()) then
+                        executeCreationRequest (parsedQuery.entityCreation ())
+                    elif notNull (parsedQuery.entitySelection ()) then
+                        executeSelectionRequest (parsedQuery.entitySelection ())
+                    elif notNull (parsedQuery.entityReplacement ()) then
+                        executeReplacementRequest (parsedQuery.entityReplacement ())
+                    elif notNull (parsedQuery.entityRetrieval ()) then
+                        executeRetrievalRequest (parsedQuery.entityRetrieval ())
+                    elif notNull (parsedQuery.entityRemoval ()) then
+                        executeRemovalRequest (parsedQuery.entityRemoval ())
+                    elif notNull (parsedQuery.entityDropping ()) then
+                        executeDroppingRequest (parsedQuery.entityDropping ())
+                    else
+                        Result.Error("Cannot identify the query type!")
+
+            }
+
+        let responseAsString =
+            response
+            |> Result.map (fun json -> "Ok: " + json.GetRawText())
+            |> Result.valueOr ((+) "Error: ")
+
+        logger.LogInformation($"Sending response: {responseAsString}")
+        response

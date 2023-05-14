@@ -1,4 +1,4 @@
-module CustomDatabaseTests.DataStorageTests.DataStorageEntityAdditionTests
+module CustomDatabaseTests.DataStorageTests.AddEntitiesTests
 
 
 open CustomDatabase
@@ -7,13 +7,8 @@ open NUnit.Framework
 open Swensen.Unquote
 
 [<TestFixture>]
-type DataStorageEntityAdditionTests() =
+type AddEntitiesTests() =
     inherit DataStorageTestSuite()
-
-    let asSingletonListUnsafe someList =
-        match someList with
-        | [ singleValue ] -> singleValue
-        | _ -> failwith "The given list is not singleton!"
 
     [<SetUp>]
     member this.``prepare entity definitions``() =
@@ -30,7 +25,7 @@ type DataStorageEntityAdditionTests() =
         test
             <@
                 Result.isError
-                <| this.DataStorage.AddEntities(this.NonExistentEntityName, [ this.TestEntityLabeledRow ])
+                <| this.DataStorage.AddEntities(this.NonExistentEntityName, [ this.TestEntityLabeledRow1 ])
             @>
 
     [<Test>]
@@ -42,29 +37,23 @@ type DataStorageEntityAdditionTests() =
         test
             <@
                 Result.isOk
-                <| this.DataStorage.AddEntities(this.TestEntity.Name, [ this.TestEntityLabeledRow ])
+                <| this.DataStorage.AddEntities(this.TestEntity.Name, [ this.TestEntityLabeledRow1 ])
             @>
 
-        let selectedEntity =
-            this.DataStorage.SelectEntities(this.TestEntity.Name, None)
-            |> Result.defaultWith failwith
-            |> asSingletonListUnsafe
+        let selectedEntity = this.GetSingularEntityUnsafeByName this.TestEntity.Name
 
         test <@ set selectedEntity.Keys = set [ "pointer"; this.TestColumn.Name ] @>
-        test <@ selectedEntity[this.TestColumn.Name] = this.TestEntityLabeledRow[this.TestColumn.Name] @>
+        test <@ selectedEntity[this.TestColumn.Name] = this.TestEntityLabeledRow1[this.TestColumn.Name] @>
 
     [<Test>]
     member this.``entity instance disappears after removal``() =
         test
             <@
                 Result.isOk
-                <| this.DataStorage.AddEntities(this.TestEntity.Name, [ this.TestEntityLabeledRow ])
+                <| this.DataStorage.AddEntities(this.TestEntity.Name, [ this.TestEntityLabeledRow1 ])
             @>
 
-        let selectedEntity =
-            this.DataStorage.SelectEntities(this.TestEntity.Name, None)
-            |> Result.defaultWith failwith
-            |> asSingletonListUnsafe
+        let selectedEntity = this.GetSingularEntityUnsafeByName this.TestEntity.Name
 
         test
             <@
@@ -81,7 +70,7 @@ type DataStorageEntityAdditionTests() =
                 Result.isOk
                 <| this.DataStorage.AddEntities(
                     this.TestEntityWithUniqueColumn.Name,
-                    [ this.TestEntityWithUniqueColumnLabeledRow ]
+                    [ this.TestEntityWithUniqueColumnLabeledRow1 ]
                 )
             @>
 
@@ -90,7 +79,7 @@ type DataStorageEntityAdditionTests() =
                 Result.isError
                 <| this.DataStorage.AddEntities(
                     this.TestEntityWithUniqueColumn.Name,
-                    [ this.TestEntityWithUniqueColumnLabeledRow ]
+                    [ this.TestEntityWithUniqueColumnLabeledRow1 ]
                 )
             @>
 
@@ -99,5 +88,5 @@ type DataStorageEntityAdditionTests() =
         test
             <@
                 Result.isError
-                <| this.DataStorage.AddEntities(this.TestEntityWithUniqueColumn.Name, [ this.TestEntityLabeledRow ])
+                <| this.DataStorage.AddEntities(this.TestEntityWithUniqueColumn.Name, [ this.TestEntityLabeledRow1 ])
             @>

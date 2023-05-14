@@ -18,7 +18,6 @@ Simplified visualization of the custom query language can be found [here](https:
 * [java runtime](https://openjdk.org/)
 
 ### Dependencies
-
 * [ASP.net](https://ASP.net)
 * [ANTLR4](https://github.com/antlr/antlr4)
 * [Antlr4BuildTasks](https://github.com/kaby76/Antlr4BuildTasks)

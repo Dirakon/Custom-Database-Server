@@ -1,4 +1,4 @@
-module CustomDatabaseTests.DataStorageTests.DataStorageGetEntityDefinitionTests
+module CustomDatabaseTests.DataStorageTests.GetEntityDefinitionsTests
 
 
 open CustomDatabase
@@ -7,7 +7,7 @@ open NUnit.Framework
 open Swensen.Unquote
 
 [<TestFixture>]
-type DataStorageGetEntityDefinitionTests() =
+type GetEntityDefinitionsTests() =
     inherit DataStorageTestSuite()
 
     [<Test>]
