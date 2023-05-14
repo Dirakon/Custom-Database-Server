@@ -1,4 +1,4 @@
-module CustomDatabaseTests.ArithmeticExpressionTests
+module CustomDatabaseTests.ExpressionTests.ArithmeticTests
 
 open CustomDatabase
 open CustomDatabase.Value

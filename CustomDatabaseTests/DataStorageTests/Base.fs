@@ -48,6 +48,16 @@ type DataStorageTestSuite() =
     member this.DataStorage = _dataStorage
     member this.NonExistentEntityName = "don_exist"
 
+    member this.AsSingletonListUnsafe someList =
+        match someList with
+        | [ singleValue ] -> singleValue
+        | _ -> failwith "The given list is not singleton!"
+
+    member this.GetSingularEntityUnsafeByName entityName =
+        this.DataStorage.SelectEntities(entityName, None)
+        |> Result.defaultWith failwith
+        |> this.AsSingletonListUnsafe
+
     member this.GetPointerFromLabeledRowUnsafe(row: IDictionary<string, Value>) =
         match row["pointer"] with
         | String s -> s
@@ -62,7 +72,8 @@ type DataStorageTestSuite() =
         { Name = "test_entity"
           Columns = [ this.TestColumn ] }
 
-    member this.TestEntityLabeledRow = dict [ this.TestColumn.Name, String "value" ]
+    member this.TestEntityLabeledRow1 = dict [ this.TestColumn.Name, String "value" ]
+    member this.TestEntityLabeledRow2 = dict [ this.TestColumn.Name, String "value2" ]
 
     member this.TestUniqueColumn: ColumnDescription =
         { Name = "column_name_unique"
@@ -75,9 +86,13 @@ type DataStorageTestSuite() =
         { Name = "test_entity_with_unique"
           Columns = [ this.TestUniqueColumn ] }
 
-    member this.TestEntityWithUniqueColumnLabeledRow =
+    member this.TestEntityWithUniqueColumnLabeledRow1 =
         dict [ this.TestUniqueColumn.Name, String "value" ]
 
+    member this.TestEntityWithUniqueColumnLabeledRow2 =
+        dict [ this.TestUniqueColumn.Name, String "value2" ]
+
+    member this.UnusedValue = String "some unused value"
 
     [<SetUp>]
     member _.``prepare data storage``() = _dataStorage <- getNewDataStorage ()

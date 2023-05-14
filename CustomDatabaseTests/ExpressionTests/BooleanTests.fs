@@ -1,4 +1,4 @@
-module CustomDatabaseTests.BooleanExpressionTests
+module CustomDatabaseTests.ExpressionTests.BooleanTests
 
 
 open CustomDatabase
